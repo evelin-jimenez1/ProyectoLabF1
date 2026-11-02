@@ -116,6 +116,10 @@ int main()
     glm::mat4 projection = glm::perspective(glm::radians(camera.GetZoom()),
         (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 2000.0f);
 
+    // Propiedades del Sol (Luz Direccional/Puntual)
+    glm::vec3 lightPos(0.0f, 300.0f, 0.0f); // Sol alto en el centro del mapa
+    glm::vec3 lightColor(1.0f, 0.95f, 0.8f); // Luz ligeramente amarilla/calida
+
     // Game loop
     while (!glfwWindowShouldClose(window))
     {
@@ -134,6 +138,11 @@ int main()
         glm::mat4 view = camera.GetViewMatrix();
         glUniformMatrix4fv(glGetUniformLocation(shader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
         glUniformMatrix4fv(glGetUniformLocation(shader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+
+        // Enviar variables de Iluminacion
+        glUniform3f(glGetUniformLocation(shader.Program, "lightPos"), lightPos.x, lightPos.y, lightPos.z);
+        glUniform3f(glGetUniformLocation(shader.Program, "lightColor"), lightColor.x, lightColor.y, lightColor.z);
+        glUniform3f(glGetUniformLocation(shader.Program, "viewPos"), camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
 
         // ----- Pasto -----
         UsarTextura(shader, texPasto, REPETIR_PASTO, REPETIR_PASTO);
