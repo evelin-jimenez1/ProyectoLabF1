@@ -1,21 +1,22 @@
 #version 330 core
-layout (location = 0) in vec3 aPos;
-layout (location = 1) in vec3 aNormal;
-layout (location = 2) in vec2 aTexCoords;
+layout (location = 0) in vec3 position;
+layout (location = 1) in vec3 normal;
+layout (location = 2) in vec2 texCoords;
 
-out vec2 TexCoords;
+out vec3 FragPos;
 out vec3 Normal;
+out vec2 TexCoords;
 
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
-// Cuantas veces se repite la imagen en U y en V
-uniform vec2 repetir;
-
 void main()
 {
-    TexCoords = aTexCoords * repetir;     // > 1 = la imagen se repite (GL_REPEAT)
-    Normal = mat3(transpose(inverse(model))) * aNormal;
-    gl_Position = projection * view * model * vec4(aPos, 1.0);
+    gl_Position = projection * view * model * vec4(position, 1.0f);
+    // Posición del vértice en el mundo real
+    FragPos = vec3(model * vec4(position, 1.0f));
+    // Matriz normal para evitar deformación de la luz al escalar objetos
+    Normal = mat3(transpose(inverse(model))) * normal;
+    TexCoords = texCoords;
 }
