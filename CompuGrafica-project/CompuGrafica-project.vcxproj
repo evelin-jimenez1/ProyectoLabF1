@@ -36,7 +36,9 @@
     <ClInclude Include="Shader.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Cargademodelos.cpp" />
+    <ClCompile Include="CargaModelos.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Texturas.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

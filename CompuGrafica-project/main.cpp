@@ -1,6 +1,8 @@
 // =============================================================
-//  Proyecto Final - Carga de la pista con textura de imagen
-//  (basado en su practica de carga de modelos)
+//  Proyecto Final - Autodromo Hermanos Rodriguez (F1)
+//  main.cpp: ventana, camara y ciclo de render.
+//    - Las texturas estan en      Texturas.h / Texturas.cpp
+//    - Los modelos estan en       CargaModelos.h / CargaModelos.cpp
 //
 //  Controles: W A S D = mover | Shift = rapido | mouse = mirar | ESC = salir
 // =============================================================
@@ -18,16 +20,15 @@
 // GL includes
 #include "Shader.h"
 #include "Camera.h"
-#include "Model.h"
 
 // GLM Mathemtics
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-// Other Libs
-#include "SOIL2/SOIL2.h"
-#include "stb_image.h"      // ya trae STB_IMAGE_IMPLEMENTATION adentro
+// Archivos propios del proyecto
+#include "Texturas.h"
+#include "CargaModelos.h"
 
 // Properties
 const GLuint WIDTH = 1280, HEIGHT = 720;
@@ -37,16 +38,13 @@ int SCREEN_WIDTH, SCREEN_HEIGHT;
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
 void MouseCallback(GLFWwindow* window, double xPos, double yPos);
 void DoMovement();
-GLuint CargarImagen(const char* ruta);
 
-// ---------- Textura de la pista ----------
-// Las UV salieron de "Proyectar desde la vista (hasta limites)":
-// toda la pista (488 x 354) cabe en una sola imagen, por eso hay
-// que repetirla. 80 x 60 = una imagen cada ~6 m.
-// Si el asfalto se ve muy grande, suban los numeros; si se ve
-// muy chico o repetitivo, bajenlos.
-const float REPETIR_U = 80.0f;
-const float REPETIR_V = 60.0f;
+// ---------- Repeticion de las texturas ----------
+// Pista: 488 x 354 en una sola imagen -> 80 x 60 = una imagen cada ~6 m
+const float REPETIR_ASFALTO_U = 80.0f;
+const float REPETIR_ASFALTO_V = 60.0f;
+// Pasto: plano de 1000 x 1000 -> 100 = una imagen cada 10 m
+const float REPETIR_PASTO = 100.0f;
 
 // Camera (arriba y alejada, porque la pista es grande)
 Camera camera(glm::vec3(0.0f, 100.0f, 250.0f));
@@ -68,7 +66,7 @@ int main()
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
-    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Proyecto Final - Pista", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Proyecto Final - Autodromo F1", nullptr, nullptr);
     if (nullptr == window)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -93,15 +91,16 @@ int main()
     glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     glEnable(GL_DEPTH_TEST);
 
-    // Shaders de la pista (textura que se repite)
+    // Shader (textura que se repite + sombreado sencillo)
     Shader shader("Shader/pista.vs", "Shader/pista.frag");
 
-    // Modelo y textura
-    Model pista((char*)"Models/pistaf1.obj");
-    GLuint texAsfalto = CargarImagen("images/asfalto.png");
+    // ---------- Modelos (CargaModelos.cpp) ----------
+    CargarModelos();
 
-    // CORREGIDO: GetZoom() esta en grados -> glm::radians
-    // CORREGIDO: plano lejano en 2000 (con 100 la pista se cortaba)
+    // ---------- Texturas (Texturas.cpp) ----------
+    GLuint texAsfalto = CargarTextura("images/asfalto.png");
+    GLuint texPasto   = CargarTextura("images/pasto.png");
+
     glm::mat4 projection = glm::perspective(glm::radians(camera.GetZoom()),
         (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 2000.0f);
 
@@ -124,55 +123,20 @@ int main()
         glUniformMatrix4fv(glGetUniformLocation(shader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
         glUniformMatrix4fv(glGetUniformLocation(shader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
 
-        // Textura del asfalto en la unidad 0 + cuantas veces se repite
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texAsfalto);
-        glUniform1i(glGetUniformLocation(shader.Program, "texture_diffuse1"), 0);
-        glUniform2f(glGetUniformLocation(shader.Program, "repetir"), REPETIR_U, REPETIR_V);
+        // ----- Pasto -----
+        UsarTextura(shader, texPasto, REPETIR_PASTO, REPETIR_PASTO);
+        DibujarPasto(shader);
 
-        // Pista en el origen, tamano real
-        glm::mat4 model = glm::mat4(1.0f);
-        glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-        pista.Draw(shader);
+        // ----- Pista -----
+        UsarTextura(shader, texAsfalto, REPETIR_ASFALTO_U, REPETIR_ASFALTO_V);
+        DibujarPista(shader);
 
         glfwSwapBuffers(window);
     }
 
+    LiberarModelos();
     glfwTerminate();
     return 0;
-}
-
-// =============================================================
-//  Carga una imagen como textura (con GL_REPEAT para repetirla)
-// =============================================================
-GLuint CargarImagen(const char* ruta)
-{
-    GLuint textura;
-    glGenTextures(1, &textura);
-    glBindTexture(GL_TEXTURE_2D, textura);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    int ancho, alto, canales;
-    stbi_set_flip_vertically_on_load(true);
-    unsigned char* imagen = stbi_load(ruta, &ancho, &alto, &canales, 0);
-    if (imagen)
-    {
-        GLenum formato = (canales == 4) ? GL_RGBA : GL_RGB;   // png = 4, jpg = 3
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glTexImage2D(GL_TEXTURE_2D, 0, formato, ancho, alto, 0, formato, GL_UNSIGNED_BYTE, imagen);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else
-    {
-        std::cout << "No se pudo cargar la imagen: " << ruta << std::endl;
-    }
-    stbi_image_free(imagen);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    return textura;
 }
 
 // Moves/alters the camera positions based on user input
