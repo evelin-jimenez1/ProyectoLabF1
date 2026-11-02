@@ -21,18 +21,22 @@
   <ItemGroup>
     <None Include="Shader\core.frag" />
     <None Include="Shader\core.vs" />
+    <None Include="Shader\escena.frag" />
+    <None Include="Shader\escena.vs" />
     <None Include="Shader\lamp.frag" />
     <None Include="Shader\lamp.vs" />
     <None Include="Shader\lighting.frag" />
     <None Include="Shader\lighting.vs" />
     <None Include="Shader\modelLoading.frag" />
     <None Include="Shader\modelLoading.vs" />
+    <None Include="Shader\pista.frag" />
+    <None Include="Shader\pista.vs" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Shader.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Maquina de estados.cpp" />
+    <ClCompile Include="Cargademodelos.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

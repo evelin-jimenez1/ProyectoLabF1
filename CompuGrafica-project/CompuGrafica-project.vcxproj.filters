@@ -45,6 +45,18 @@
     <None Include="Shader\lighting.vs">
       <Filter>Archivos de origen\shaders</Filter>
     </None>
+    <None Include="Shader\escena.frag">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="Shader\escena.vs">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="Shader\pista.frag">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="Shader\pista.vs">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Shader.h">
@@ -52,7 +64,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="fuentesDeLuz.cpp">
+    <ClCompile Include="Cargademodelos.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
   </ItemGroup>
