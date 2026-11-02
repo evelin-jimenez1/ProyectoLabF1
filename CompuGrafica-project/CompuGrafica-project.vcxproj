@@ -38,6 +38,7 @@
   <ItemGroup>
     <ClCompile Include="CargaModelos.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Spline.cpp" />
     <ClCompile Include="Texturas.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
