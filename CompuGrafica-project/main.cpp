@@ -152,6 +152,11 @@ int main()
         UsarTextura(shader, texAsfalto, REPETIR_ASFALTO_U, REPETIR_ASFALTO_V);
         DibujarPista(shader);
 
+        glUniform2f(glGetUniformLocation(shader.Program, "repetir"), 1.0f, 1.0f);
+        DibujarGradas(shader);
+
+        DibujarMarcador(shader);
+
         // ----- Spline (linea blanca por el centro de la pista) -----
         if (verSpline)
         {

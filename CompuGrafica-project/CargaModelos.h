@@ -13,6 +13,8 @@ void CargarModelos();
 // con UsarTextura(...).
 void DibujarPasto(Shader& shader);
 void DibujarPista(Shader& shader);
+void DibujarGradas(Shader& shader);
+void DibujarMarcador(Shader& shader);
 
 // Libera la memoria al cerrar el programa
 void LiberarModelos();

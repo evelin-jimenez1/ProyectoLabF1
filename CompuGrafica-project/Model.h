@@ -221,7 +221,9 @@ GLint TextureFromFile(const char *path, string directory)
 
 	// Assign texture to ID
 	glBindTexture(GL_TEXTURE_2D, textureID);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 	glGenerateMipmap(GL_TEXTURE_2D);
 
 	// Parameters

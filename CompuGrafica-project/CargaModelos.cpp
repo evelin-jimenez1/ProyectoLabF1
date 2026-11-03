@@ -18,6 +18,8 @@
 // Se guardan como punteros porque un Model solo se puede crear
 // despues de glewInit(); por eso se crean dentro de CargarModelos().
 static Model* pista = nullptr;
+static Model* gradasForo = nullptr;
+static Model* marcadorForo = nullptr;
 
 // ---------------- Pasto (plano) ----------------
 static GLuint VAO, VBO, EBO;
@@ -27,7 +29,8 @@ void CargarModelos()
 {
     // ----- Pista -----
     pista = new Model((char*)"Models/pistaf1.obj");
-
+    gradasForo = new Model((char*)"Models/Gradas_Estadio_Texturizadas.obj");
+    marcadorForo = new Model((char*)"Models/MarcadorF1.obj");
     // ----- Pasto: plano de 1000 x 1000 -----
     GLfloat vertices[] =
     {
@@ -93,7 +96,43 @@ void LiberarModelos()
     delete pista;
     pista = nullptr;
 
+    delete gradasForo;
+    gradasForo = nullptr;
+
+	delete marcadorForo;
+	marcadorForo = nullptr;
+
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &EBO);
+}
+
+void DibujarGradas(Shader& shader)
+{
+    glm::mat4 model = glm::mat4(1.0f);
+    // Posicion inicial para probar (luego modificaras estos numeros para acomodarlas en la curva 12)
+    model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+    model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+
+    glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+    gradasForo->Draw(shader);
+}
+
+void DibujarMarcador(Shader& shader)
+{
+    glm::mat4 model = glm::mat4(1.0f);
+
+    // 1. TRASLADAR (Mover): Cambia X y Z para moverlo por el pasto hasta las curvas
+    model = glm::translate(model, glm::vec3(-190.0f, 0.0f, -100.0f));
+
+    // 2. ROTAR: Gíralo para que el texto mire hacia la pista (cambia el 90.0f por el ángulo que necesites)
+    // El glm::vec3(0.0f, 1.0f, 0.0f) significa que rota sobre el eje Y (como un trompo)
+    model = glm::rotate(model, glm::radians(10.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+    // 3. ESCALAR: Si el poste quedo muy chaparro o muy alto, cambia estos valores
+    model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+
+    glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+    glUniform2f(glGetUniformLocation(shader.Program, "repetir"), 1.0f, 1.0f);
+    marcadorForo->Draw(shader);
 }
