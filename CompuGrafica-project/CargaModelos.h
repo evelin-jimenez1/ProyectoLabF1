@@ -15,6 +15,8 @@ void DibujarPasto(Shader& shader);
 void DibujarPista(Shader& shader);
 void DibujarGradas(Shader& shader);
 void DibujarMarcador(Shader& shader);
+void DibujarBandera(Shader shaderEstatico, Shader shaderViento);
+
 
 // Libera la memoria al cerrar el programa
 void LiberarModelos();

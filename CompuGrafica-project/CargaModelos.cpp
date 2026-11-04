@@ -20,6 +20,11 @@
 static Model* pista = nullptr;
 static Model* gradasForo = nullptr;
 static Model* marcadorForo = nullptr;
+Model* modeloBandera;
+Model* modeloAsta = nullptr;
+Model* modeloTela = nullptr;
+
+
 
 // ---------------- Pasto (plano) ----------------
 static GLuint VAO, VBO, EBO;
@@ -31,6 +36,10 @@ void CargarModelos()
     pista = new Model((char*)"Models/pistaf1.obj");
     gradasForo = new Model((char*)"Models/Gradas_Estadio_Texturizadas.obj");
     marcadorForo = new Model((char*)"Models/MarcadorF1.obj");
+    modeloBandera = new Model((char*)"Models/Bandera_Mexico.obj");
+    modeloAsta = new Model((char*)"Models/Asta.obj");
+    modeloTela = new Model((char*)"Models/Tela.obj");
+
     // ----- Pasto: plano de 1000 x 1000 -----
     GLfloat vertices[] =
     {
@@ -135,4 +144,20 @@ void DibujarMarcador(Shader& shader)
     glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
     glUniform2f(glGetUniformLocation(shader.Program, "repetir"), 1.0f, 1.0f);
     marcadorForo->Draw(shader);
+}
+
+void DibujarBandera(Shader shaderEstatico, Shader shaderViento) {
+    glm::mat4 model = glm::mat4(1.0f);
+    // Coordenadas (X, Y, Z) para acomodarla. Cámbialas a tu gusto.
+    model = glm::translate(model, glm::vec3(-175.0f, 0.0f, -125.0f));
+    model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+
+    shaderEstatico.Use();
+    glUniformMatrix4fv(glGetUniformLocation(shaderEstatico.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+    modeloAsta->Draw(shaderEstatico);
+    
+    shaderViento.Use();
+    glUniformMatrix4fv(glGetUniformLocation(shaderViento.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+    modeloTela->Draw(shaderViento);
+
 }

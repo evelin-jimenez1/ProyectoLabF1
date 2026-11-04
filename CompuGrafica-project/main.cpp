@@ -98,6 +98,7 @@ int main()
 
     // Shader (textura que se repite + sombreado sencillo)
     Shader shader("Shader/pista.vs", "Shader/pista.frag");
+    Shader shaderBandera("Shader/bandera.vs", "Shader/bandera.frag");
 
     // ---------- Modelos (CargaModelos.cpp) ----------
     CargarModelos();
@@ -156,6 +157,17 @@ int main()
         DibujarGradas(shader);
 
         DibujarMarcador(shader);
+
+		// Dibuja bandera animada
+        shaderBandera.Use();
+        // Enviar matrices de cámara al nuevo shader
+        glUniformMatrix4fv(glGetUniformLocation(shaderBandera.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+        glUniformMatrix4fv(glGetUniformLocation(shaderBandera.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+
+        glUniform1f(glGetUniformLocation(shaderBandera.Program, "time"), currentFrame);
+
+        DibujarBandera(shader, shaderBandera);
+
 
         // ----- Spline (linea blanca por el centro de la pista) -----
         if (verSpline)

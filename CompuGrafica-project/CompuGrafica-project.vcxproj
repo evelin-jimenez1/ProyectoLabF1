@@ -19,6 +19,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <None Include="bandera.frag" />
+    <None Include="bandera.vs" />
     <None Include="Shader\core.frag" />
     <None Include="Shader\core.vs" />
     <None Include="Shader\escena.frag" />

@@ -57,6 +57,12 @@
     <None Include="Shader\pista.vs">
       <Filter>Archivos de origen\shaders</Filter>
     </None>
+    <None Include="bandera.vs">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="bandera.frag">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Shader.h">
@@ -71,6 +77,9 @@
       <Filter>Archivos de origen</Filter>
     </ClCompile>
     <ClCompile Include="Texturas.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
+    <ClCompile Include="Spline.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
   </ItemGroup>
