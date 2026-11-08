@@ -199,3 +199,4 @@ GLuint CrearLineaSpline(int& numPuntos)
     glBindVertexArray(0);
     return VAO;
 }
+
