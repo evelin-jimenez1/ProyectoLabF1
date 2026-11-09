@@ -49,6 +49,20 @@ std::string FormatoTiempo(float s)
     return buf;
 }
 
+// Guarda el tiempo del checkpoint 'idx' (0..5) y, si cierra un sector, calcula su tiempo
+static void RegistrarCheckpoint(int idx)
+{
+    juego.tiempoCP[idx] = juego.tiempoVuelta;
+    if (idx % 2 == 1)                                   // checkpoints 2, 4 y 6 cierran un sector
+    {
+        int k = idx / 2;
+        float t = juego.tiempoCP[idx] - (k == 0 ? 0.0f : juego.tiempoCP[idx - 2]);
+        juego.sector[k] = t;
+        juego.sectorRecord[k] = (juego.mejorSector[k] == 0.0f || t < juego.mejorSector[k]);
+        if (juego.sectorRecord[k]) juego.mejorSector[k] = t;
+    }
+}
+
 static void Mensaje(const std::string& texto, float segundos)
 {
     juego.mensaje = texto;
@@ -109,9 +123,12 @@ void JuegoReiniciar()
     for (Rival& r : juego.rivales) { r.activo = false; r.carro.vel = 0.0f; }
     juego.estado = ESPERANDO_ARRANQUE;
     juego.vuelta = 1;
+    juego.tiempoTotal = 0.0f;
     juego.tiempoVuelta = 0.0f;
     juego.sigCheckpoint = 1;
     juego.tiempoParcial = 0.0f;
+    for (int i = 0; i < NUM_CHECKPOINTS; i++) juego.tiempoCP[i] = 0.0f;
+    for (int k = 0; k < 3; k++) { juego.sector[k] = 0.0f; juego.sectorRecord[k] = false; }   // el mejor se conserva
     juego.drsAbierto = false;
     juego.choquesMuro = juego.choquesRival = 0;
     CargarKeyFramesCerrarDRS();
@@ -226,7 +243,12 @@ static void CruzarMeta()
     bool record = (juego.mejorVuelta == 0.0f || juego.ultimaVuelta < juego.mejorVuelta);
     if (record) juego.mejorVuelta = juego.ultimaVuelta;
 
-    Mensaje(std::string(record ? "NUEVO RECORD " : "VUELTA COMPLETADA ") + FormatoTiempo(juego.ultimaVuelta), 4.0f);
+    juego.tiempoTotal += juego.ultimaVuelta;
+    if (juego.vuelta >= VUELTAS_CARRERA)     // ultima vuelta: termina el contrarreloj
+        Mensaje(std::string(VUELTAS_CARRERA == 1 ? "TRAMO COMPLETADO " : "CONTRARRELOJ COMPLETADA ")
+                + FormatoTiempo(VUELTAS_CARRERA == 1 ? juego.ultimaVuelta : juego.tiempoTotal), 4.0f);
+    else
+        Mensaje(std::string(record ? "NUEVO RECORD " : "VUELTA COMPLETADA ") + FormatoTiempo(juego.ultimaVuelta), 4.0f);
     AudioReproducir(SONIDO_META);
     juego.tiempoDesdeMeta = 0.0f;
 
@@ -307,6 +329,7 @@ void JuegoActualizar(float dt, const Controles& c)
     // ----- Checkpoints y meta -----
     while (juego.sigCheckpoint <= NUM_CHECKPOINTS && j.dist >= distCheckpoint[juego.sigCheckpoint - 1])
     {
+        RegistrarCheckpoint(juego.sigCheckpoint - 1);
         if (juego.sigCheckpoint == NUM_CHECKPOINTS)
         {
             CruzarMeta();

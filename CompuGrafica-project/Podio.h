@@ -7,8 +7,8 @@
 //  - Trofeo, bandera de Mexico y confeti
 //  - Camara orbital alrededor del podio y tabla de resultados en pantalla
 //
-//  El orden sale del mejor tiempo de vuelta del jugador contra el tiempo de vuelta
-//  de cada rival (longitud de la pista / velocidad predefinida del rival).
+//  El orden sale del tiempo total que hizo el jugador en el contrarreloj contra el tiempo
+//  total de cada rival (vueltas x longitud de la pista / velocidad predefinida del rival).
 //  Se sale con T (reinicia la carrera) o con P.
 // =============================================================
 #include <glm/glm.hpp>

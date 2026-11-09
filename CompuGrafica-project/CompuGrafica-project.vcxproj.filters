@@ -152,4 +152,62 @@
       <Filter>Archivos de origen</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Ambiente.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="Sombras.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="Estadio.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="Comisario.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="Boxes.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="Podio.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClCompile Include="Ambiente.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
+    <ClCompile Include="Sombras.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
+    <ClCompile Include="Estadio.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
+    <ClCompile Include="Comisario.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
+    <ClCompile Include="Boxes.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
+    <ClCompile Include="Podio.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
+    <None Include="Shader\cielo.vs">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="Shader\cielo.frag">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="Shader\sombra.vs">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="Shader\sombra.frag">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Recap.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClCompile Include="Recap.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
+  </ItemGroup>
 </Project>

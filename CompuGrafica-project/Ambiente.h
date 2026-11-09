@@ -26,6 +26,7 @@ struct ParamsAmbiente
     float niebla;            // densidad de la niebla
     float sombras;           // 0..1
     float estrellas;         // 0..1
+    float escena;            // brillo para lo que tiene shader propio (bandera, papel picado)
 };
 
 void AmbienteInicializar();             // despues de glewInit()

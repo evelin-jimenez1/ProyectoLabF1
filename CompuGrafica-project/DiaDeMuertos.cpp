@@ -2,6 +2,7 @@
 //  DiaDeMuertos.cpp
 // =============================================================
 #include "DiaDeMuertos.h"
+#include "Ambiente.h"
 #include "Primitivas.h"
 #include "Spline.h"
 #include "Texturas.h"
@@ -371,6 +372,7 @@ void DibujarPapelPicado(const glm::mat4& projection, const glm::mat4& view, floa
 	glUniformMatrix4fv(glGetUniformLocation(shaderPapel->Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 	glUniformMatrix4fv(glGetUniformLocation(shaderPapel->Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
 	glUniform1f(glGetUniformLocation(shaderPapel->Program, "time"), tiempo);
+	glUniform1f(glGetUniformLocation(shaderPapel->Program, "brilloEscena"), AmbienteParams().escena);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texPapel);
 	glUniform1i(glGetUniformLocation(shaderPapel->Program, "texture_diffuse1"), 0);

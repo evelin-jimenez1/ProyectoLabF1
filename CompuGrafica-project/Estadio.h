@@ -14,6 +14,7 @@ void EstadioInicializar();            // despues de CargarModelos() y SplineInic
 
 void DibujarGradasEstadio(Shader& shader);
 void DibujarPorticos(Shader& shader);
+void DibujarAsfalto(Shader& shader);         // asfalto + lineas, generados desde la spline
 void DibujarLineaMeta(Shader& shader);
 void DibujarPianos(Shader& shader);          // curbs rojos y blancos a las orillas de toda la pista
 void DibujarVallas(Shader& shader);

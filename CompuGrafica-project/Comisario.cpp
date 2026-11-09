@@ -141,8 +141,9 @@ void ComisarioInicializar()
 }
 
 void DibujarPersona(Shader& shader, const glm::mat4& base, float brazo, float antebrazo,
-                    float bandera, GLuint texChaleco, GLuint texBandera, float brazoIzq)
+                    float bandera, GLuint texChaleco, GLuint texBandera, float brazoIzq, GLuint texGorraColor)
 {
+    GLuint gorra = texGorraColor ? texGorraColor : texGorra;
     glm::mat4 m;
 
     // ---------- Torso (nodo padre de todo lo de arriba) ----------
@@ -159,7 +160,9 @@ void DibujarPersona(Shader& shader, const glm::mat4& base, float brazo, float an
     m = glm::translate(torso, glm::vec3(0.0f, 0.62f, 0.0f));
     DibujarMalla(shader, mallaEsfera, glm::scale(m, glm::vec3(0.30f)), texPiel);
     m = glm::translate(torso, glm::vec3(0.0f, 0.80f, 0.0f));
-    DibujarMalla(shader, mallaCilindro, glm::scale(m, glm::vec3(0.32f, 0.10f, 0.32f)), texGorra);
+    DibujarMalla(shader, mallaCilindro, glm::scale(m, glm::vec3(0.32f, 0.10f, 0.32f)), gorra);
+    m = glm::translate(torso, glm::vec3(0.0f, 0.78f, -0.20f));      // visera
+    DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(0.26f, 0.03f, 0.18f)), gorra);
 
     // Brazo izquierdo (hijo del torso): pegado al cuerpo o levantado (festejo)
     glm::mat4 hombroIzq = glm::translate(torso, glm::vec3(-0.34f, 0.32f, 0.0f));

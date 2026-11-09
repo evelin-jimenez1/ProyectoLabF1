@@ -53,12 +53,14 @@ void PodioActivar()
 {
     float L = SplineLongitud();
     // Tiempo de cada quien: mejor vuelta del jugador (o 50 s si todavia no completa ninguna)
-    float tJugador = juego.mejorVuelta > 0.0f ? juego.mejorVuelta : 50.0f;
+    // Tiempo de cada quien en el contrarreloj completo: el total real del jugador (o 50 s por vuelta
+    // si abres el podio con P sin haber corrido) contra el de cada rival (vueltas x tiempo de vuelta).
+    float tJugador = juego.tiempoTotal > 0.0f ? juego.tiempoTotal : 50.0f * VUELTAS_CARRERA;
     Piloto3 todos[1 + NUM_RIVALES];
     todos[0] = { "TU", tJugador, 0, true };
     const char* nombres[NUM_RIVALES] = { "ROSA MEXICANO", "TURQUESA", "CEMPASUCHIL" };
     for (int i = 0; i < NUM_RIVALES; i++)
-        todos[i + 1] = { nombres[i], L / juego.rivales[i].velObjetivo, i + 1, false };
+        todos[i + 1] = { nombres[i], VUELTAS_CARRERA * L / juego.rivales[i].velObjetivo, i + 1, false };
 
     std::sort(todos, todos + 1 + NUM_RIVALES, [](const Piloto3& a, const Piloto3& b) { return a.tiempo < b.tiempo; });
     for (int i = 0; i < 1 + NUM_RIVALES; i++) orden[i] = todos[i];
@@ -110,7 +112,8 @@ void PodioDibujar(Shader& shader, float t)
             brazo = brazoIzq = 0.0f;
         }
         p = glm::rotate(p, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));   // mira hacia +Z (la camara)
-        DibujarPersona(shader, p, brazo, 0.0f, 0.0f, texCamisa[orden[i].textura], 0, brazoIzq);
+        DibujarPersona(shader, p, brazo, 0.0f, 0.0f, texCamisa[orden[i].textura], 0, brazoIzq,
+                       texCamisa[orden[i].textura]);   // gorra del color de cada piloto
     }
 
     // ---------- Trofeo (copa dorada) frente al 1o ----------
@@ -158,6 +161,7 @@ void PodioHUD(int W, int H)
     float w = 460.0f, x = 30.0f, y = 30.0f;
     HUDRect(x, y, w, 70 + 34.0f * (1 + NUM_RIVALES) + 40, FONDO);
     HUDTexto("PODIO", x + 20, y + 18, 34, AMARILLO);
+    HUDTexto("TIEMPO TOTAL", x + w - 20 - HUDAnchoTexto("TIEMPO TOTAL", 12), y + 30, 12, GRIS);
     for (int i = 0; i < 1 + NUM_RIVALES; i++)
     {
         float fy = y + 75 + i * 34.0f;

@@ -14,7 +14,9 @@
 #include "Shader.h"
 
 const int NUM_RIVALES = 3;
-const int VUELTAS_CARRERA = 3;        // al terminar estas vueltas aparece el podio
+// Contrarreloj de VUELTAS_CARRERA vueltas: un solo jugador contra el cronometro, con el tiempo de
+// cada vuelta, el mejor y el total. Al terminar la ultima aparece el podio. (1 = un solo tramo.)
+const int VUELTAS_CARRERA = 5;
 const int NUM_CHECKPOINTS = 6;        // el ultimo es la meta
 
 // Estado de un monoplaza (sirve igual para el jugador y los rivales)
@@ -52,12 +54,19 @@ struct EstadoJuego
 
     // Cronometro
     int   vuelta = 1;
+    float tiempoTotal = 0.0f;       // s acumulados de las vueltas ya terminadas
     float tiempoVuelta = 0.0f;      // s
     float ultimaVuelta = 0.0f;      // s (0 = todavia no hay)
     float mejorVuelta = 0.0f;       // s (0 = todavia no hay)
     int   sigCheckpoint = 1;        // siguiente checkpoint por cruzar (1..NUM_CHECKPOINTS)
     float tiempoParcial = 0.0f;     // tiempo en el ultimo checkpoint
     float tiempoDesdeMeta = 999.0f; // s desde que se cruzo la meta (para la bandera a cuadros)
+
+    // Sectores (la pista se divide en 3; cada uno termina en el checkpoint 2, 4 y 6)
+    float tiempoCP[NUM_CHECKPOINTS] = {};   // tiempo de la vuelta al cruzar cada checkpoint
+    float sector[3] = {};                   // ultimo tiempo de cada sector (0 = todavia no hay)
+    float mejorSector[3] = {};              // mejor tiempo de cada sector
+    bool  sectorRecord[3] = {};             // true si el ultimo tiempo fue el mejor (se ve morado)
 
     // DRS
     bool  drsDisponible = false;    // estamos en zona de DRS

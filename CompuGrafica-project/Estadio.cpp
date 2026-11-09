@@ -22,6 +22,10 @@ static GLuint texTronco, texCopa[2], texCerro[2];
 static GLuint texPiano = 0;                 // franjas rojas y blancas (images/piano.png)
 static GLuint vaoPianos = 0;
 static int numVerticesPianos = 0;
+// Asfalto y lineas generados desde la spline
+static GLuint texAsfalto = 0, texAsfaltoNormal = 0, texAsfaltoEsp = 0, texLineaPista = 0;
+static GLuint vaoAsfalto = 0, vaoLineas = 0;
+static int numVerticesAsfalto = 0, numVerticesLineas = 0;
 
 // Arboles: posiciones (x, z, escala) calculadas una vez, lejos de la pista y de las zonas ocupadas
 struct Arbol { float x, z, escala; int tipo; };
@@ -116,6 +120,105 @@ void DibujarPianos(Shader& shader)
     glBindVertexArray(0);
 }
 
+// ===================== ASFALTO PROCEDURAL =====================
+// La pista se genera a partir de la curva spline (Spline.cpp): una tira de ANCHO_PISTA metros
+// centrada en la curva, con un borde que baja al pasto, mas las lineas blancas
+// (orillas y raya central discontinua).
+static const float TEXTURA_ASFALTO_M = 6.0f;      // metros que cubre una repeticion de la textura
+
+// Crea un VAO (posicion, normal, uv) con los vertices dados
+static GLuint SubirMalla(const std::vector<float>& v)
+{
+    GLuint vao, vbo;
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, v.size() * sizeof(float), v.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (GLvoid*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (GLvoid*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (GLvoid*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+    glBindVertexArray(0);
+    return vao;
+}
+
+// Cuadrito entre dos metros de la pista y dos laterales, a la altura 'y'
+static void Tira(std::vector<float>& v, float s0, float s1, float latA, float latB, float y,
+                 float u0, float u1, float t0, float t1)
+{
+    glm::vec3 a = SplinePuntoPista(s0, latA), b = SplinePuntoPista(s0, latB);
+    glm::vec3 c = SplinePuntoPista(s1, latB), d = SplinePuntoPista(s1, latA);
+    a.y = b.y = c.y = d.y = y;
+    glm::vec3 n(0, 1, 0);
+    Vert(v, a, n, u0, t0); Vert(v, b, n, u1, t0); Vert(v, c, n, u1, t1);
+    Vert(v, a, n, u0, t0); Vert(v, c, n, u1, t1); Vert(v, d, n, u0, t1);
+}
+
+static void CrearAsfalto()
+{
+    float L = SplineLongitud();
+    float mitad = ANCHO_PISTA * 0.5f;
+    std::vector<float> asfalto, lineas;
+
+    for (float s0 = 0.0f; s0 < L; s0 += 1.0f)
+    {
+        float s1 = glm::min(s0 + 1.0f, L);
+        float t0 = s0 / TEXTURA_ASFALTO_M, t1 = s1 / TEXTURA_ASFALTO_M;
+        float u0 = 0.0f, u1 = ANCHO_PISTA / TEXTURA_ASFALTO_M;
+
+        // superficie
+        Tira(asfalto, s0, s1, -mitad, mitad, ALTURA_PISTA, u0, u1, t0, t1);
+
+        // bordes que bajan al pasto (izquierdo y derecho)
+        for (int lado = -1; lado <= 1; lado += 2)
+        {
+            glm::vec3 a = SplinePuntoPista(s0, lado * mitad), c = SplinePuntoPista(s1, lado * mitad);
+            glm::vec3 R = SplineDerecha(s0);
+            glm::vec3 n = glm::normalize(glm::vec3(lado * R.x, 0.0f, lado * R.z));
+            glm::vec3 a1 = a, c1 = c, a0 = a, c0 = c;
+            a1.y = c1.y = ALTURA_PISTA; a0.y = c0.y = 0.0f;
+            Vert(asfalto, a1, n, 0, t0); Vert(asfalto, a0, n, 1, t0); Vert(asfalto, c0, n, 1, t1);
+            Vert(asfalto, a1, n, 0, t0); Vert(asfalto, c0, n, 1, t1); Vert(asfalto, c1, n, 0, t1);
+        }
+
+        // lineas blancas: orillas continuas (menos donde esta el carril de boxes)
+        const float YL = ALTURA_PISTA + 0.01f;
+        Tira(lineas, s0, s1, -mitad + 0.20f, -mitad + 0.38f, YL, 0, 1, 0, 1);
+        if (!(s0 > 10.0f && s0 < 140.0f))
+            Tira(lineas, s0, s1, mitad - 0.38f, mitad - 0.20f, YL, 0, 1, 0, 1);
+        // raya central discontinua: 3 m con linea y 6 m sin ella
+        if (std::fmod(s0, 9.0f) < 3.0f)
+            Tira(lineas, s0, s1, -0.08f, 0.08f, YL, 0, 1, 0, 1);
+    }
+    numVerticesAsfalto = (int)(asfalto.size() / 8);
+    numVerticesLineas = (int)(lineas.size() / 8);
+    vaoAsfalto = SubirMalla(asfalto);
+    vaoLineas = SubirMalla(lineas);
+}
+
+void DibujarAsfalto(Shader& shader)
+{
+    glUniform1f(glGetUniformLocation(shader.Program, "brilloPropio"), 0.0f);
+    glm::mat4 model(1.0f);
+    glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+
+    // asfalto con mapa normal y especular
+    UsarTextura(shader, texAsfalto, 1.0f, 1.0f);
+    UsarMapas(shader, texAsfaltoNormal, texAsfaltoEsp);
+    glBindVertexArray(vaoAsfalto);
+    glDrawArrays(GL_TRIANGLES, 0, numVerticesAsfalto);
+    QuitarMapas(shader);
+
+    // lineas blancas
+    UsarTextura(shader, texLineaPista, 1.0f, 1.0f);
+    glBindVertexArray(vaoLineas);
+    glDrawArrays(GL_TRIANGLES, 0, numVerticesLineas);
+    glBindVertexArray(0);
+}
+
 void EstadioInicializar()
 {
     for (int i = 0; i < NUM_PATROCINIOS; i++)
@@ -133,6 +236,13 @@ void EstadioInicializar()
     // ---- Pianos (curbs) rojos y blancos a las orillas de la pista ----
     texPiano = CargarTextura("images/piano.png");
     CrearPianos();
+
+    // ---- Asfalto procedural con mapa normal y especular ----
+    texAsfalto = CargarTextura("images/asfalto.png");
+    texAsfaltoNormal = CargarTextura("images/asfalto_normal.png");
+    texAsfaltoEsp = CargarTextura("images/asfalto_especular.png");
+    texLineaPista = CargarTextura("images/linea_blanca.png");
+    CrearAsfalto();
 
     // ---- Arboles y cerros ----
     texTronco = CrearTexturaColor(0.30f, 0.20f, 0.12f);

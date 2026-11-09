@@ -23,6 +23,11 @@ uniform float sombrasActivas; // 0 = sin sombras (noche), 1 = con sombras
 uniform vec3 fogColor;
 uniform float fogDensity;
 
+// Mapas normal y especular (asfalto y auto). usarMapas = 0: se ignoran
+uniform float usarMapas;
+uniform sampler2D normalMap;
+uniform sampler2D specMap;
+
 uniform float brilloPropio;   // 0 = usa la luz normal, 1 = se ve con su propio color
 
 // Pintura de los autos rivales: 0 = textura normal, 1 = se pinta del color 'tinte'
@@ -30,7 +35,7 @@ uniform float brilloPropio;   // 0 = usa la luz normal, 1 = se ve con su propio 
 uniform float usarTinte;
 uniform vec3 tinte;
 
-#define NUM_FOCOS 19 // 18 de los postes + 1 del letrero (letrero siempre encendido)
+#define NUM_FOCOS 8   // maximo 8 spotlights activos a la vez (los mas cercanos a la camara)
 struct SpotLight {
     vec3 position;
     vec3 direction;
@@ -81,26 +86,41 @@ float CalcularLuzSol(vec3 norm, vec3 lightDir)
     return luz / 9.0;
 }
 
+// Normal del mapa normal sin necesitar tangentes en los modelos:
+// se arma el marco tangente con las derivadas de la posicion y de las coordenadas de textura.
+vec3 NormalDelMapa(vec3 N, vec2 uv)
+{
+    vec3 dp1 = dFdx(FragPos), dp2 = dFdy(FragPos);
+    vec2 duv1 = dFdx(uv), duv2 = dFdy(uv);
+    vec3 dp2perp = cross(dp2, N), dp1perp = cross(N, dp1);
+    vec3 T = dp2perp * duv1.x + dp1perp * duv2.x;
+    vec3 B = dp2perp * duv1.y + dp1perp * duv2.y;
+    float invmax = inversesqrt(max(max(dot(T, T), dot(B, B)), 1e-12));
+    vec3 m = texture(normalMap, uv).xyz * 2.0 - 1.0;
+    return normalize(mat3(T * invmax, B * invmax, N) * m);
+}
+
 void main()
 {
     // 1. Componente Ambiental (Luz base para que no haya oscuridad total)
     vec3 ambient = ambientColor;
     
     // 2. Componente Difusa (Luz direccional directa)
+    vec2 finalTexCoords = vec2(TexCoords.x * repetir.x, TexCoords.y * repetir.y);
     vec3 norm = normalize(Normal);
+    if (usarMapas > 0.5) norm = NormalDelMapa(norm, finalTexCoords);
     vec3 lightDir = normalize(lightPos - FragPos);
     float diff = max(dot(norm, lightDir), 0.0f);
     vec3 diffuse = diff * lightColor;
     
     // 3. Componente Especular (Brillo BLINN-PHONG)
     float specularStrength = 0.3f; // Un valor bajo para asfalto/pasto
+    if (usarMapas > 0.5) specularStrength = 1.3 * texture(specMap, finalTexCoords).r;   // mapa especular
     vec3 viewDir = normalize(viewPos - FragPos);
     vec3 halfwayDir = normalize(lightDir + viewDir);  
     float spec = pow(max(dot(norm, halfwayDir), 0.0f), 32.0f); // 32 es el nivel de brillo
     vec3 specular = specularStrength * spec * lightColor;
     
-    // Multiplicador de coordenadas UV
-    vec2 finalTexCoords = vec2(TexCoords.x * repetir.x, TexCoords.y * repetir.y);
     vec4 texColor = texture(texture_diffuse1, finalTexCoords);
     if (texColor.a < 0.1) discard;   // PNG con transparencia (publico, rejas...)
     if (usarTinte > 0.5)

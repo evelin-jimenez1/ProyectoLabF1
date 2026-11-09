@@ -12,19 +12,19 @@ static const ParamsAmbiente AMBIENTES[3] =
     { glm::vec3(0.70f, 0.85f, 0.95f), glm::vec3(0.22f, 0.45f, 0.82f),
       glm::normalize(glm::vec3(0.35f, 0.85f, 0.30f)), glm::vec3(1.0f, 0.95f, 0.80f),
       glm::vec3(1.0f, 0.95f, 0.80f), glm::vec3(0.40f, 0.38f, 0.32f),
-      0.0020f, 1.0f, 0.0f },
+      0.0020f, 1.0f, 0.0f, 1.0f },
 
     // ATARDECER: sol bajo y naranja al fondo de la recta, cielo naranja -> morado
     { glm::vec3(1.00f, 0.60f, 0.30f), glm::vec3(0.28f, 0.18f, 0.46f),
       glm::normalize(glm::vec3(0.80f, 0.30f, 0.42f)), glm::vec3(1.0f, 0.55f, 0.20f),
       glm::vec3(1.35f, 0.80f, 0.42f), glm::vec3(0.50f, 0.40f, 0.46f),
-      0.0030f, 1.0f, 0.0f },
+      0.0030f, 1.0f, 0.0f, 0.85f },
 
     // NOCHE: luna azul, estrellas, sin sombras (los reflectores hacen el trabajo)
     { glm::vec3(0.05f, 0.07f, 0.16f), glm::vec3(0.008f, 0.012f, 0.05f),
       glm::normalize(glm::vec3(-0.30f, 0.70f, 0.20f)), glm::vec3(0.45f, 0.55f, 0.90f),
       glm::vec3(0.16f, 0.21f, 0.40f), glm::vec3(0.11f, 0.14f, 0.26f),
-      0.0035f, 0.0f, 1.0f },
+      0.0035f, 0.0f, 1.0f, 0.30f },
 };
 
 static ModoAmbiente modo = AMB_ATARDECER;      // arranca en atardecer
@@ -62,6 +62,7 @@ void AmbienteActualizar(float dt)
     actual.niebla += (d.niebla - actual.niebla) * k;
     actual.sombras += (d.sombras - actual.sombras) * k;
     actual.estrellas += (d.estrellas - actual.estrellas) * k;
+    actual.escena += (d.escena - actual.escena) * k;
 }
 
 void AmbienteDibujarCielo(const glm::mat4& proyeccion, const glm::mat4& vista)

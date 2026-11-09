@@ -57,6 +57,9 @@ Model* Llanta_DD = nullptr;    // delantera derecha
 Model* Llanta_TI = nullptr;    // trasera izquierda
 Model* Llanta_TD = nullptr;    // trasera derecha
 
+// Mapas normal y especular del auto (carro_pintura y carbono)
+static GLuint texCarroNormal = 0, texCarroEsp = 0, texCarbonoNormal = 0, texCarbonoEsp = 0;
+
 // ---------------- Dia de Muertos ----------------
 Model* ModeloCalavera = nullptr;   // calavera de azucar (mide 1 m de alto)
 
@@ -94,6 +97,12 @@ void CargarModelos()
     modeloTecpro_F1 = new Model((char*)"Models/Tecpro_F1.obj");
     modeloBarreras = new Model((char*)"Models/Barreras.obj");
     modeloFermin = new Model((char*)"Models/Fermin.obj");
+
+    // Mapas normal y especular del monoplaza (se cargan igual que las texturas de los modelos)
+    texCarroNormal = TextureFromFile("carro_normal.png", "images");
+    texCarroEsp = TextureFromFile("carro_especular.png", "images");
+    texCarbonoNormal = TextureFromFile("carbono_normal.png", "images");
+    texCarbonoEsp = TextureFromFile("carbono_especular.png", "images");
     modeloPoste = new Model((char*)"Models/Postes_Ilum.obj");
     modeloAltar = new Model((char*)"Models/Altar.obj");
     modeloPantalla = new Model((char*)"Models/Pantalla.obj");
@@ -427,8 +436,10 @@ void DibujarCarro(Shader& shader, glm::mat4 base, float giroRuedas,
     centro.y -= RADIO_LLANTA;
     modelCarro = glm::translate(base, -centro);
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelCarro));
+    UsarMapas(shader, texCarroNormal, texCarroEsp);      // pintura: mapa normal + especular
     Chasis->Draw(shader);
     Aleron->Draw(shader);   // fijo: usa la misma matriz del chasis
+    QuitarMapas(shader);
     glUniform1f(glGetUniformLocation(shader.Program, "usarTinte"), 0.0f);   // lo demas no se pinta
 
     // ---------- DRS (hijo del chasis, gira en su bisagra) ----------
@@ -436,7 +447,9 @@ void DibujarCarro(Shader& shader, glm::mat4 base, float giroRuedas,
     model = glm::rotate(model, glm::radians(DRS_SENTIDO * aperturaDRS), glm::vec3(1.0f, 0.0f, 0.0f));
     model = glm::translate(model, -posDRS);
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    UsarMapas(shader, texCarbonoNormal, texCarbonoEsp);  // fibra de carbono
     DRS->Draw(shader);
+    QuitarMapas(shader);
 
     // ---------- Llantas (como las patas del perro) ----------
     Model* llantas[4] = { Llanta_DI, Llanta_DD, Llanta_TI, Llanta_TD };

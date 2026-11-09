@@ -164,43 +164,195 @@ static void FranjaPapelPicado(float x, float y, float w)
         HUDRect(x + i * ancho, y, ancho, 5.0f, colores[i]);
 }
 
+// ---------------- Figuras para el HUD circular y el minimapa ----------------
+// Angulos en grados: 0 = derecha, y crecen en sentido de las manecillas (la pantalla tiene y hacia abajo)
+static const float PI_HUD = 3.14159265f;
+
+static void HUDLinea(float x0, float y0, float x1, float y1, float grosor, glm::vec4 c)
+{
+    float dx = x1 - x0, dy = y1 - y0;
+    float len = std::sqrt(dx * dx + dy * dy);
+    if (len < 1e-4f) return;
+    float nx = -dy / len * grosor * 0.5f, ny = dx / len * grosor * 0.5f;
+    float q[6][2] = { {x0 + nx, y0 + ny}, {x1 + nx, y1 + ny}, {x1 - nx, y1 - ny},
+                      {x0 + nx, y0 + ny}, {x1 - nx, y1 - ny}, {x0 - nx, y0 - ny} };
+    for (auto& p : q) vertices.insert(vertices.end(), { p[0], p[1], c.r, c.g, c.b, c.a });
+}
+
+// Pedazo de anillo entre los radios r0 y r1
+static void HUDArco(float cx, float cy, float r0, float r1, float a0, float a1, glm::vec4 c)
+{
+    int pasos = glm::max(1, (int)std::ceil(std::fabs(a1 - a0) / 4.0f));
+    for (int i = 0; i < pasos; i++)
+    {
+        float t0 = glm::radians(a0 + (a1 - a0) * i / pasos), t1 = glm::radians(a0 + (a1 - a0) * (i + 1) / pasos);
+        float q[6][2] = { {cx + r0 * std::cos(t0), cy + r0 * std::sin(t0)}, {cx + r1 * std::cos(t0), cy + r1 * std::sin(t0)},
+                          {cx + r1 * std::cos(t1), cy + r1 * std::sin(t1)},
+                          {cx + r0 * std::cos(t0), cy + r0 * std::sin(t0)}, {cx + r1 * std::cos(t1), cy + r1 * std::sin(t1)},
+                          {cx + r0 * std::cos(t1), cy + r0 * std::sin(t1)} };
+        for (auto& p : q) vertices.insert(vertices.end(), { p[0], p[1], c.r, c.g, c.b, c.a });
+    }
+}
+
+static void HUDDisco(float cx, float cy, float r, glm::vec4 c) { HUDArco(cx, cy, 0.0f, r, 0.0f, 360.0f, c); }
+
+// Color del velocimetro: verde -> amarillo -> rojo segun la posicion en el arco (0..1)
+static glm::vec4 ColorVelocimetro(float t)
+{
+    glm::vec3 verde(0.20f, 0.95f, 0.50f), amarillo(1.0f, 0.85f, 0.10f), rojo(1.0f, 0.22f, 0.25f);
+    glm::vec3 c = t < 0.6f ? glm::mix(verde, amarillo, t / 0.6f) : glm::mix(amarillo, rojo, (t - 0.6f) / 0.4f);
+    return glm::vec4(c, 1.0f);
+}
+
+// ---------------- Velocimetro circular con RPM, marcha y DRS ----------------
+static void DibujarVelocimetro(int W, int H, const glm::vec4& FONDO)
+{
+    const float R = 100.0f;
+    float cx = W - R - 40.0f, cy = H - R - 30.0f;
+    float kmh = VelocidadKmh();
+    const float KMH_MAX = 190.0f;
+    float frac = glm::clamp(kmh / KMH_MAX, 0.0f, 1.0f);
+
+    HUDDisco(cx, cy, R + 10.0f, glm::vec4(FONDO.r, FONDO.g, FONDO.b, 0.85f));
+    // arco de fondo y arco de velocidad (270 grados, con la abertura abajo)
+    const float A0 = 135.0f, SWEEP = 270.0f;
+    HUDArco(cx, cy, R - 18.0f, R - 4.0f, A0, A0 + SWEEP, glm::vec4(1, 1, 1, 0.16f));
+    int segs = (int)(frac * 60.0f);
+    for (int i = 0; i < segs; i++)
+    {
+        float t = i / 60.0f;
+        glm::vec4 col = juego.drsAbierto ? glm::vec4(0.65f, 0.35f, 1.0f, 1.0f) : ColorVelocimetro(t);
+        HUDArco(cx, cy, R - 18.0f, R - 4.0f, A0 + SWEEP * i / 60.0f, A0 + SWEEP * (i + 1) / 60.0f + 0.6f, col);
+    }
+
+    // marcha y RPM (simulados a partir de la velocidad)
+    int marcha = 1 + glm::min(6, (int)(kmh / 24.0f));
+    float enMarcha = glm::clamp((kmh - (marcha - 1) * 24.0f) / 24.0f, 0.0f, 1.0f);
+    int rpm = kmh < 1.0f ? 4000 : 6000 + (int)(6000.0f * enMarcha);
+    // arco delgado interior = RPM
+    HUDArco(cx, cy, R - 30.0f, R - 25.0f, A0, A0 + SWEEP, glm::vec4(1, 1, 1, 0.12f));
+    HUDArco(cx, cy, R - 30.0f, R - 25.0f, A0, A0 + SWEEP * glm::clamp((rpm - 4000) / 9000.0f, 0.0f, 1.0f), glm::vec4(0.75f, 0.35f, 1.0f, 1.0f));
+
+    std::string vel = std::to_string((int)std::round(kmh));
+    HUDTexto(vel, cx - HUDAnchoTexto(vel, 46) * 0.5f, cy - 44.0f, 46, BLANCO);
+    HUDTexto("KM/H", cx - HUDAnchoTexto("KM/H", 12) * 0.5f, cy + 10.0f, 12, GRIS);
+    // marcha dentro de un circulo
+    HUDDisco(cx, cy + 40.0f, 14.0f, glm::vec4(1, 1, 1, 0.22f));
+    HUDTexto(std::to_string(marcha), cx - HUDAnchoTexto("0", 16) * 0.5f, cy + 40.0f - 8.0f, 16, BLANCO);
+    std::string r = "RPM " + std::to_string(rpm);
+    HUDTexto(r, cx - HUDAnchoTexto(r, 10) * 0.5f, cy + 64.0f, 10, GRIS);
+
+    // DRS: gris = no disponible, contorno = disponible, relleno = abierto
+    glm::vec4 colDRS = juego.drsAbierto ? VERDE : (juego.drsDisponible ? VERDE : glm::vec4(0.4f, 0.4f, 0.4f, 1.0f));
+    float bx = cx - R - 78.0f, by = cy + R - 36.0f;
+    if (juego.drsAbierto) HUDRect(bx, by, 64, 28, colDRS);
+    else
+    {
+        HUDRect(bx, by, 64, 3, colDRS); HUDRect(bx, by + 25, 64, 3, colDRS);
+        HUDRect(bx, by, 3, 28, colDRS); HUDRect(bx + 61, by, 3, 28, colDRS);
+    }
+    HUDTexto("DRS", bx + 9, by + 7, 14, juego.drsAbierto ? glm::vec4(0, 0, 0, 1) : colDRS);
+}
+
+// ---------------- Minimapa de la pista con los carros ----------------
+static void DibujarMinimapa(int H, const glm::vec4& FONDO)
+{
+    static std::vector<glm::vec2> pista;     // puntos de la spline en coordenadas del mundo (x, z)
+    static float minX, minZ, escala;
+    const float PX = 20.0f, PW = 200.0f, PH = 150.0f;
+    float PY = H - 75.0f - PH - 12.0f;
+
+    if (pista.empty())
+    {
+        float L = SplineLongitud(), maxX, maxZ;
+        minX = minZ = 1e9f; maxX = maxZ = -1e9f;
+        for (float s = 0.0f; s < L; s += 8.0f)
+        {
+            glm::vec3 p = SplinePosicion(s);
+            pista.push_back(glm::vec2(p.x, p.z));
+            minX = glm::min(minX, p.x); maxX = glm::max(maxX, p.x);
+            minZ = glm::min(minZ, p.z); maxZ = glm::max(maxZ, p.z);
+        }
+        escala = glm::min((PW - 24.0f) / (maxX - minX), (PH - 24.0f) / (maxZ - minZ));
+        // se centra en el panel
+        minX -= ((PW - 24.0f) / escala - (maxX - minX)) * 0.5f;
+        minZ -= ((PH - 24.0f) / escala - (maxZ - minZ)) * 0.5f;
+    }
+    auto aPantalla = [&](float x, float z) { return glm::vec2(PX + 12.0f + (x - minX) * escala, PY + 12.0f + (z - minZ) * escala); };
+
+    HUDRect(PX, PY, PW, PH, FONDO);
+    for (size_t i = 0; i < pista.size(); i++)
+    {
+        glm::vec2 a = aPantalla(pista[i].x, pista[i].y), b = aPantalla(pista[(i + 1) % pista.size()].x, pista[(i + 1) % pista.size()].y);
+        HUDLinea(a.x, a.y, b.x, b.y, 4.0f, glm::vec4(0.05f, 0.05f, 0.08f, 0.9f));   // contorno
+    }
+    for (size_t i = 0; i < pista.size(); i++)
+    {
+        glm::vec2 a = aPantalla(pista[i].x, pista[i].y), b = aPantalla(pista[(i + 1) % pista.size()].x, pista[(i + 1) % pista.size()].y);
+        HUDLinea(a.x, a.y, b.x, b.y, 2.2f, glm::vec4(0.92f, 0.92f, 0.96f, 1.0f));
+    }
+    // meta
+    glm::vec3 m = SplinePosicion(0.0f);
+    glm::vec2 pm = aPantalla(m.x, m.z);
+    HUDRect(pm.x - 3, pm.y - 6, 6, 12, glm::vec4(1, 1, 1, 1));
+    HUDRect(pm.x - 3, pm.y - 6, 3, 6, glm::vec4(0, 0, 0, 1)); HUDRect(pm.x, pm.y, 3, 6, glm::vec4(0, 0, 0, 1));
+
+    // rivales y jugador
+    for (const Rival& r : juego.rivales)
+        if (r.activo)
+        {
+            glm::vec3 p = SplinePuntoPista(r.carro.dist, r.carro.lateral);
+            glm::vec2 q = aPantalla(p.x, p.z);
+            HUDDisco(q.x, q.y, 4.0f, glm::vec4(r.color, 1.0f));
+        }
+    glm::vec3 p = SplinePuntoPista(juego.jugador.dist, juego.jugador.lateral);
+    glm::vec2 q = aPantalla(p.x, p.z);
+    HUDDisco(q.x, q.y, 6.5f, glm::vec4(1, 1, 1, 1));
+    HUDDisco(q.x, q.y, 4.8f, glm::vec4(1.0f, 0.85f, 0.10f, 1.0f));
+}
+
 void DibujarHUDJuego(int W, int H, int modoCamara)
 {
     // ----- Cronometro (arriba a la izquierda) -----
-    HUDRect(20, 20, 330, 150, FONDO);
+    bool variasVueltas = VUELTAS_CARRERA > 1;
+    HUDRect(20, 20, 330, variasVueltas ? 178.0f : 150.0f, FONDO);
     FranjaPapelPicado(20, 15, 330);
-    HUDTexto("VUELTA " + std::to_string(glm::min(juego.vuelta, VUELTAS_CARRERA)) + "/" + std::to_string(VUELTAS_CARRERA), 35, 35, 21, GRIS);
+    HUDTexto(VUELTAS_CARRERA == 1 ? std::string("TRAMO") : "VUELTA " + std::to_string(glm::min(juego.vuelta, VUELTAS_CARRERA)) + "/" + std::to_string(VUELTAS_CARRERA), 35, 35, 21, GRIS);
     HUDTexto(FormatoTiempo(juego.tiempoVuelta), 35, 66, 42, BLANCO);
     HUDTexto("ULTIMA " + (juego.ultimaVuelta > 0 ? FormatoTiempo(juego.ultimaVuelta) : std::string("-:--.--")), 35, 122, 14, GRIS);
     HUDTexto("MEJOR  " + (juego.mejorVuelta > 0 ? FormatoTiempo(juego.mejorVuelta) : std::string("-:--.--")), 35, 145, 14, MORADO);
-
-    // ----- Checkpoints y rivales (arriba a la derecha) -----
-    HUDRect(W - 290.0f, 20, 270, 100, FONDO);
-    FranjaPapelPicado(W - 290.0f, 15, 270);
-    int cp = glm::min(juego.sigCheckpoint - 1, NUM_CHECKPOINTS - 1);
-    HUDTexto("CHECKPOINT " + std::to_string(cp) + "/" + std::to_string(NUM_CHECKPOINTS - 1), W - 275.0f, 35, 16, BLANCO);
-    // barra de avance de la vuelta
-    float avance = glm::clamp(juego.jugador.dist / SplineLongitud(), 0.0f, 1.0f);
-    HUDRect(W - 275.0f, 62, 240, 8, glm::vec4(1, 1, 1, 0.25f));
-    HUDRect(W - 275.0f, 62, 240 * avance, 8, AMARILLO);
-    HUDTexto("RIVALES " + std::to_string(RivalesActivos()) + "/" + std::to_string(NUM_RIVALES), W - 275.0f, 85, 16, GRIS);
-
-    // ----- Velocidad y DRS (abajo a la derecha) -----
-    HUDRect(W - 250.0f, H - 140.0f, 230, 120, FONDO);
-    FranjaPapelPicado(W - 250.0f, H - 145.0f, 230);
-    std::string vel = std::to_string((int)std::round(VelocidadKmh()));
-    HUDTexto(vel, W - 40.0f - HUDAnchoTexto(vel, 56) - 70, H - 125.0f, 56, BLANCO);
-    HUDTexto("KM/H", W - 95.0f, H - 85.0f, 14, GRIS);
-    // DRS: gris = no disponible, contorno verde = disponible, relleno verde = abierto
-    glm::vec4 colDRS = juego.drsAbierto ? VERDE : (juego.drsDisponible ? VERDE : glm::vec4(0.4f, 0.4f, 0.4f, 1.0f));
-    float bx = W - 235.0f, by = H - 55.0f;
-    if (juego.drsAbierto) HUDRect(bx, by, 80, 28, colDRS);
-    else
+    if (variasVueltas)   // contrarreloj de varias vueltas: tiempo total acumulado
     {
-        HUDRect(bx, by, 80, 3, colDRS); HUDRect(bx, by + 25, 80, 3, colDRS);
-        HUDRect(bx, by, 3, 28, colDRS); HUDRect(bx + 77, by, 3, 28, colDRS);
+        float total = juego.tiempoTotal + (juego.estado == CORRIENDO && juego.vuelta <= VUELTAS_CARRERA ? juego.tiempoVuelta : 0.0f);
+        HUDTexto("TOTAL  " + FormatoTiempo(total), 35, 168, 14, BLANCO);
+        HUDTexto("CONTRARRELOJ", 350.0f - 15.0f - HUDAnchoTexto("CONTRARRELOJ", 11), 40, 11, AMARILLO);
     }
-    HUDTexto("DRS", bx + 17, by + 7, 14, juego.drsAbierto ? glm::vec4(0, 0, 0, 1) : colDRS);
+
+    // ----- Sectores (arriba a la derecha): morado = tu mejor tiempo -----
+    const glm::vec4 PURPURA(0.75f, 0.35f, 1.0f, 1.0f);
+    HUDRect(W - 290.0f, 20, 270, 165, FONDO);
+    FranjaPapelPicado(W - 290.0f, 15, 270);
+    HUDTexto("SECTORES", W - 275.0f, 35, 16, BLANCO);
+    int sectorActual = glm::min(2, (juego.sigCheckpoint - 1) / 2);
+    for (int k = 0; k < 3; k++)
+    {
+        float fy = 62.0f + k * 26.0f;
+        bool hay = juego.sector[k] > 0.0f;
+        glm::vec4 col = !hay ? GRIS : (juego.sectorRecord[k] ? PURPURA : BLANCO);
+        if (k == sectorActual && juego.estado == CORRIENDO) HUDRect(W - 283.0f, fy + 2, 4, 14, AMARILLO);   // sector en curso
+        HUDTexto("S" + std::to_string(k + 1), W - 275.0f, fy, 16, col);
+        std::string t = hay ? FormatoTiempo(juego.sector[k]) : "-:--.--";
+        HUDTexto(t, W - 35.0f - HUDAnchoTexto(t, 16), fy, 16, col);
+    }
+    // barra de avance del tramo y rivales
+    float avance = glm::clamp(juego.jugador.dist / SplineLongitud(), 0.0f, 1.0f);
+    HUDRect(W - 275.0f, 148, 240, 8, glm::vec4(1, 1, 1, 0.25f));
+    HUDRect(W - 275.0f, 148, 240 * avance, 8, AMARILLO);
+    HUDTexto("RIVALES " + std::to_string(RivalesActivos()) + "/" + std::to_string(NUM_RIVALES), W - 275.0f, 164, 12, GRIS);
+
+    // ----- Velocimetro circular (abajo a la derecha) y minimapa (abajo a la izquierda) -----
+    DibujarVelocimetro(W, H, FONDO);
+    DibujarMinimapa(H, FONDO);
 
     // ----- Camara y controles (abajo a la izquierda) -----
     const char* nombres[3] = { "CAMARA LIBRE", "TERCERA PERSONA", "ONBOARD" };

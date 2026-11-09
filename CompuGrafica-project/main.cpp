@@ -27,6 +27,8 @@
 // Std. Includes
 #include <string>
 #include <iostream>
+#include <vector>
+#include <algorithm>
 
 // GLEW
 #include <GL/glew.h>
@@ -61,6 +63,7 @@
 #include "Comisario.h"
 #include "Boxes.h"
 #include "Podio.h"
+#include "Recap.h"
 
 
 // Properties
@@ -156,7 +159,9 @@ const float ALTURA_FOCO_ARRIBA = 1.34f;   // cuanto mas arriba esta el foco de a
 float patronParpadeo[10] = { 1, 0, 0, 1, 0, 1, 1, 0, 1, 0 };
 bool  lucesActivas = false;   // F las prende / apaga (N las ajusta al cambiar de ambiente)
 bool  lucesPrevias = false;
+int   vueltaPrevia = 1;        // para saber cuando termina una vuelta (repeticion en las pantallas)
 bool  podioMostrado = false;   // para no volver a abrir el podio apenas se cierra
+float tiempoFinCarrera = 0.0f; // segundos desde que se termino el tramo
 float tiempoLuces = 0.0f;
 
 // Regresa la intensidad (0 o 1) de un grupo de focos segun el tiempo.
@@ -169,19 +174,32 @@ float IntensidadGrupo(float t, float inicio)
     return 1.0f;                                          // encendido fijo
 }
 
+// Un spotlight: posicion, direccion, intensidad y forma del cono
+struct Foco
+{
+    glm::vec3 pos, dir;
+    float intensidad;
+    float cutIn, cutOut;        // angulos del cono (grados)
+    float lineal, cuadratica;   // atenuacion con la distancia
+};
+
+// Acta: maximo 8 spotlights activos a la vez. Hay 19 (2 por poste + el del letrero),
+// pero al shader solo se le mandan los 8 encendidos mas cercanos a la camara.
+const int MAX_FOCOS_ACTIVOS = 8;
+
 // Manda un foco al shader (focos[i])
-void EnviarFoco(Shader& shader, int i, glm::vec3 pos, glm::vec3 dir, float intensidad)
+void EnviarFoco(Shader& shader, int i, const Foco& f)
 {
     std::string n = "focos[" + std::to_string(i) + "].";
-    glUniform3f(glGetUniformLocation(shader.Program, (n + "position").c_str()), pos.x, pos.y, pos.z);
-    glUniform3f(glGetUniformLocation(shader.Program, (n + "direction").c_str()), dir.x, dir.y, dir.z);
-    glUniform1f(glGetUniformLocation(shader.Program, (n + "cutOff").c_str()), glm::cos(glm::radians(21.0f)));
-    glUniform1f(glGetUniformLocation(shader.Program, (n + "outerCutOff").c_str()), glm::cos(glm::radians(30.0f)));
+    glUniform3f(glGetUniformLocation(shader.Program, (n + "position").c_str()), f.pos.x, f.pos.y, f.pos.z);
+    glUniform3f(glGetUniformLocation(shader.Program, (n + "direction").c_str()), f.dir.x, f.dir.y, f.dir.z);
+    glUniform1f(glGetUniformLocation(shader.Program, (n + "cutOff").c_str()), glm::cos(glm::radians(f.cutIn)));
+    glUniform1f(glGetUniformLocation(shader.Program, (n + "outerCutOff").c_str()), glm::cos(glm::radians(f.cutOut)));
     glUniform1f(glGetUniformLocation(shader.Program, (n + "constant").c_str()), 1.0f);
-    glUniform1f(glGetUniformLocation(shader.Program, (n + "linear").c_str()), 0.022f);
-    glUniform1f(glGetUniformLocation(shader.Program, (n + "quadratic").c_str()), 0.0019f);
+    glUniform1f(glGetUniformLocation(shader.Program, (n + "linear").c_str()), f.lineal);
+    glUniform1f(glGetUniformLocation(shader.Program, (n + "quadratic").c_str()), f.cuadratica);
     glUniform3f(glGetUniformLocation(shader.Program, (n + "color").c_str()), 1.0f, 0.91f, 0.80f); // color de Blender
-    glUniform1f(glGetUniformLocation(shader.Program, (n + "intensidad").c_str()), intensidad * 2.0f); // "5000 W"
+    glUniform1f(glGetUniformLocation(shader.Program, (n + "intensidad").c_str()), f.intensidad * 2.0f); // "5000 W"
 }
 
 int main()
@@ -247,6 +265,7 @@ int main()
     ComisarioInicializar();
     BoxesInicializar();
     PodioInicializar();
+    RecapInicializar();
     lucesActivas = (AmbienteModo() != AMB_DIA);   // de noche / atardecer los postes arrancan prendidos
 
     // ---------- Texturas (Texturas.cpp) ----------
@@ -310,7 +329,18 @@ int main()
         BoxesFiltrarControles(controles);       // en boxes el carro se maneja solo
         JuegoActualizar(deltaTime, controles);
         BoxesActualizar(deltaTime);             // pit stop: carril, parada y salida
-        if (!podioMostrado && juego.vuelta > VUELTAS_CARRERA) { PodioActivar(); podioMostrado = true; }
+        // Al terminar el tramo (VUELTAS_CARRERA = 1: contrarreloj) se ve la bandera a cuadros
+        // unos segundos y despues aparece el podio con los resultados.
+        // Cada vuelta terminada se graba y pasa a repetirse en las pantallas del circuito
+        if (juego.vuelta > vueltaPrevia) RecapVueltaTerminada();
+        vueltaPrevia = juego.vuelta;
+        RecapActualizar(deltaTime);
+
+        if (!podioMostrado && juego.vuelta > VUELTAS_CARRERA)
+        {
+            tiempoFinCarrera += deltaTime;
+            if (tiempoFinCarrera > 4.0f) { PodioActivar(); podioMostrado = true; }
+        }
 
         // ----- Calaveras: brincan cuando pasa el carro (maquina de estados) -----
         glm::mat4 baseCarro = MatrizCarroMundo(juego.jugador);
@@ -367,34 +397,35 @@ int main()
         SombrasEnviar(shader, lightSpace, amb.sombras);
         glUniform3f(glGetUniformLocation(shader.Program, "viewPos"), camPos.x, camPos.y, camPos.z);
 
-        // ----- Focos de los postes (se mandan cada cuadro por la animacion) -----
+        // ----- Focos: solo los 8 encendidos mas cercanos a la camara (maximo del acta) -----
+        std::vector<Foco> focos;
         for (int i = 0; i < NUM_POSTES; i++) {
-            EnviarFoco(shader, i * 2, posFocoAbajo[i], dirFoco[i], intAbajo);
-            EnviarFoco(shader, i * 2 + 1, posFocoAbajo[i] + glm::vec3(0.0f, ALTURA_FOCO_ARRIBA, 0.0f), dirFoco[i], intArriba);
+            if (intAbajo > 0.0f)
+                focos.push_back({ posFocoAbajo[i], dirFoco[i], intAbajo, 21.0f, 30.0f, 0.022f, 0.0019f });
+            if (intArriba > 0.0f)
+                focos.push_back({ posFocoAbajo[i] + glm::vec3(0.0f, ALTURA_FOCO_ARRIBA, 0.0f), dirFoco[i], intArriba, 21.0f, 30.0f, 0.022f, 0.0019f });
         }
-        // ----- Foco del letrero -----
-        // Siempre encendido. Sigue al marcador (mismos numeros que DibujarMarcador)
+        // Foco del letrero: siempre encendido. Sigue al marcador (mismos numeros que DibujarMarcador)
         // y su atenuacion fuerte hace que solo alumbre el letrero, no el piso.
         glm::mat4 baseMarcador = glm::translate(glm::mat4(1.0f), glm::vec3(-190.0f, 0.0f, -98.0f));
         baseMarcador = glm::rotate(baseMarcador, glm::radians(95.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-
         glm::vec3 posFocoLetrero = glm::vec3(baseMarcador * glm::vec4(-3.5195f, 13.2f, -3.604f, 1.0f)); // punto (w = 1)
         glm::vec3 dirFocoLetrero = glm::vec3(baseMarcador * glm::vec4(0.0f, -0.7966f, 0.6045f, 0.0f));  // direccion (w = 0)
+        focos.push_back({ posFocoLetrero, dirFocoLetrero, 2.0f, 40.0f, 50.0f, 0.0f, 0.2f });
 
-        EnviarFoco(shader, 18, posFocoLetrero, dirFocoLetrero, 2.0f);
-
-        glUniform1f(glGetUniformLocation(shader.Program, "focos[18].cutOff"), glm::cos(glm::radians(40.0f)));
-        glUniform1f(glGetUniformLocation(shader.Program, "focos[18].outerCutOff"), glm::cos(glm::radians(50.0f)));
-        glUniform1f(glGetUniformLocation(shader.Program, "focos[18].linear"), 0.0f);
-        glUniform1f(glGetUniformLocation(shader.Program, "focos[18].quadratic"), 0.2f);
+        std::sort(focos.begin(), focos.end(), [&](const Foco& a, const Foco& b) {
+            return glm::distance(a.pos, camPos) < glm::distance(b.pos, camPos); });
+        for (int i = 0; i < MAX_FOCOS_ACTIVOS; i++) {
+            if (i < (int)focos.size()) EnviarFoco(shader, i, focos[i]);
+            else EnviarFoco(shader, i, { glm::vec3(0.0f), glm::vec3(0.0f, -1.0f, 0.0f), 0.0f, 21.0f, 30.0f, 1.0f, 1.0f });   // ranura apagada
+        }
 
         // ----- Pasto -----
         UsarTextura(shader, texPasto, REPETIR_PASTO, REPETIR_PASTO);
         DibujarPasto(shader);
 
         // ----- Pista -----
-        UsarTextura(shader, texAsfalto, REPETIR_ASFALTO_U, REPETIR_ASFALTO_V);
-        DibujarPista(shader);
+        DibujarAsfalto(shader);   // asfalto procedural desde la spline (ver Estadio.cpp)
 
         glUniform2f(glGetUniformLocation(shader.Program, "repetir"), 1.0f, 1.0f);
         DibujarGradasEstadio(shader);   // gradas con publico (Foro Sol y recta principal)
@@ -467,13 +498,15 @@ int main()
         DibujarDiaDeMuertos(shader);
 
         // ---------- Pantallas alrededor del circuito ----------
+        // Repeticion de la vuelta anterior (Recap.cpp); mientras no haya, el video de siempre
+        GLuint texEnPantallas = RecapTextura() ? RecapTextura() : texPantalla[cuadroActual];
         // (x, y, z, rotacion en Y).
-        DibujarPantalla(shader, texPantalla[cuadroActual], -57.1f, 0.0f, -134.7f, -98.0f); // Recta principal
-        DibujarPantalla(shader, texPantalla[cuadroActual], -180.5f, 0.0f, -143.3f, -33.0f); // Curva izquierda arriba
-        DibujarPantalla(shader, texPantalla[cuadroActual], -91.2f, 0.0f, -44.6f, 82.0f); // Recta interior
-        DibujarPantalla(shader, texPantalla[cuadroActual], 42.7f, 0.0f, -12.8f, 84.0f); // Despues de la S
-        DibujarPantalla(shader, texPantalla[cuadroActual], 216.3f, 0.0f, -79.4f, 118.0f); // Derecha (eses)
-        DibujarPantalla(shader, texPantalla[cuadroActual], 153.5f, 0.0f, 124.5f, -124.0f); // Antes de la horquilla
+        DibujarPantalla(shader, texEnPantallas, -57.1f, 0.0f, -134.7f, -98.0f); // Recta principal
+        DibujarPantalla(shader, texEnPantallas, -180.5f, 0.0f, -143.3f, -33.0f); // Curva izquierda arriba
+        DibujarPantalla(shader, texEnPantallas, -91.2f, 0.0f, -44.6f, 82.0f); // Recta interior
+        DibujarPantalla(shader, texEnPantallas, 42.7f, 0.0f, -12.8f, 84.0f); // Despues de la S
+        DibujarPantalla(shader, texEnPantallas, 216.3f, 0.0f, -79.4f, 118.0f); // Derecha (eses)
+        DibujarPantalla(shader, texEnPantallas, 153.5f, 0.0f, 124.5f, -124.0f); // Antes de la horquilla
 
 
 		// Dibuja bandera animada
@@ -483,6 +516,7 @@ int main()
         glUniformMatrix4fv(glGetUniformLocation(shaderBandera.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
 
         glUniform1f(glGetUniformLocation(shaderBandera.Program, "time"), currentFrame);
+        glUniform1f(glGetUniformLocation(shaderBandera.Program, "brilloEscena"), amb.escena);   // de noche se oscurece
 
         DibujarBandera(shader, shaderBandera);
 
@@ -507,6 +541,9 @@ int main()
         DibujarPapelPicado(projection, view, currentFrame);
         DibujarTiempoMarcador(projection * view);
         DibujarLetreroZona(projection * view);
+        // Se graba la escena ya dibujada (sin HUD) para la repeticion de las pantallas
+        RecapGrabar(SCREEN_WIDTH, SCREEN_HEIGHT, deltaTime, !PodioActivo() && juego.estado == CORRIENDO);
+
         if (PodioActivo()) PodioHUD(SCREEN_WIDTH, SCREEN_HEIGHT);
         else DibujarHUDJuego(SCREEN_WIDTH, SCREEN_HEIGHT, modoCamara);
 
@@ -589,8 +626,11 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
     {
         JuegoReiniciar();
         BoxesReiniciar();
+        RecapReiniciar();
+        vueltaPrevia = 1;
         PodioSalir();
         podioMostrado = false;
+        tiempoFinCarrera = 0.0f;
     }
 }
 

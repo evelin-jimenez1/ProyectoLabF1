@@ -52,3 +52,20 @@ void UsarTextura(Shader& shader, GLuint textura, float repetirU, float repetirV)
     glUniform1i(glGetUniformLocation(shader.Program, "texture_diffuse1"), 0);
     glUniform2f(glGetUniformLocation(shader.Program, "repetir"), repetirU, repetirV);
 }
+
+void UsarMapas(Shader& shader, GLuint normal, GLuint especular)
+{
+    glActiveTexture(GL_TEXTURE6);
+    glBindTexture(GL_TEXTURE_2D, normal);
+    glUniform1i(glGetUniformLocation(shader.Program, "normalMap"), 6);
+    glActiveTexture(GL_TEXTURE7);
+    glBindTexture(GL_TEXTURE_2D, especular);
+    glUniform1i(glGetUniformLocation(shader.Program, "specMap"), 7);
+    glActiveTexture(GL_TEXTURE0);
+    glUniform1f(glGetUniformLocation(shader.Program, "usarMapas"), 1.0f);
+}
+
+void QuitarMapas(Shader& shader)
+{
+    glUniform1f(glGetUniformLocation(shader.Program, "usarMapas"), 0.0f);
+}
