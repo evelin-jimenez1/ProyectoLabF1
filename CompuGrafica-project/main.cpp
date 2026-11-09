@@ -76,9 +76,6 @@ void MouseCallback(GLFWwindow* window, double xPos, double yPos);
 void DoMovement();
 
 // ---------- Repeticion de las texturas ----------
-// Pista: 488 x 354 en una sola imagen -> 80 x 60 = una imagen cada ~6 m
-const float REPETIR_ASFALTO_U = 80.0f;
-const float REPETIR_ASFALTO_V = 60.0f;
 // Pasto: plano de 1000 x 1000 -> 100 = una imagen cada 10 m
 const float REPETIR_PASTO = 100.0f;
 
@@ -269,7 +266,6 @@ int main()
     lucesActivas = (AmbienteModo() != AMB_DIA);   // de noche / atardecer los postes arrancan prendidos
 
     // ---------- Texturas (Texturas.cpp) ----------
-    GLuint texAsfalto = CargarTextura("images/asfalto.png");
     GLuint texPasto = CargarTextura("images/pasto.png");
 
     //  Cuadros del video de la pantalla 

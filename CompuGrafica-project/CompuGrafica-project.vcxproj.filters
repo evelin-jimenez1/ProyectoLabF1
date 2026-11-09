@@ -33,43 +33,16 @@
     <None Include="Shader\hud.vs">
       <Filter>Archivos de origen\shaders</Filter>
     </None>
-    <None Include="Shader\core.frag">
-      <Filter>Archivos de origen\shaders</Filter>
-    </None>
-    <None Include="Shader\core.vs">
-      <Filter>Archivos de origen\shaders</Filter>
-    </None>
-    <None Include="Shader\modelLoading.frag">
-      <Filter>Archivos de origen\shaders</Filter>
-    </None>
-    <None Include="Shader\modelLoading.vs">
-      <Filter>Archivos de origen\shaders</Filter>
-    </None>
     <None Include="Shader\lamp.frag">
       <Filter>Archivos de origen\shaders</Filter>
     </None>
     <None Include="Shader\lamp.vs">
       <Filter>Archivos de origen\shaders</Filter>
     </None>
-    <None Include="Shader\lighting.frag">
-      <Filter>Archivos de origen\shaders</Filter>
-    </None>
-    <None Include="Shader\lighting.vs">
-      <Filter>Archivos de origen\shaders</Filter>
-    </None>
-    <None Include="Shader\escena.frag">
-      <Filter>Archivos de origen\shaders</Filter>
-    </None>
-    <None Include="Shader\escena.vs">
-      <Filter>Archivos de origen\shaders</Filter>
-    </None>
     <None Include="Shader\pista.frag">
       <Filter>Archivos de origen\shaders</Filter>
     </None>
     <None Include="Shader\pista.vs">
-      <Filter>Archivos de origen\shaders</Filter>
-    </None>
-    <None Include="bandera.vs">
       <Filter>Archivos de origen\shaders</Filter>
     </None>
     <None Include="bandera.frag">

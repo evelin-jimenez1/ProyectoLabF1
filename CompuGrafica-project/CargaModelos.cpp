@@ -25,7 +25,6 @@
 // ---------------- Modelos ----------------
 // Se guardan como punteros porque un Model solo se puede crear
 // despues de glewInit(); por eso se crean dentro de CargarModelos().
-static Model* pista = nullptr;
 static Model* gradasForo = nullptr;
 static Model* marcadorForo = nullptr;
 Model* modeloBandera;
@@ -88,7 +87,6 @@ static GLuint VAO, VBO, EBO;
 void CargarModelos()
 {
     // ----- Pista -----
-    pista = new Model((char*)"Models/pistaf1.obj");
     gradasForo = new Model((char*)"Models/Gradas_Estadio_Texturizadas.obj");
     marcadorForo = new Model((char*)"Models/Marcador_F1_animado.obj");
     modeloBandera = new Model((char*)"Models/Bandera_Mexico.obj");
@@ -203,19 +201,9 @@ void DibujarPasto(Shader& shader)
 }
 
 
-void DibujarPista(Shader& shader)
-{
-    glm::mat4 model = glm::mat4(1.0f);   // en el origen, tamano real
-    glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-    pista->Draw(shader);
-}
-
 
 void LiberarModelos()
 {
-    delete pista;
-    pista = nullptr;
-
     delete gradasForo;
     gradasForo = nullptr;
 

@@ -2,3 +2,9 @@
 Debug
 configInicial/Debug
 External Libraries/
+# Archivos de Visual Studio y salidas
+x64/
+Release/
+*.user
+*.bundle
+*.zip
