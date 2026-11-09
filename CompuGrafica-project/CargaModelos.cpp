@@ -404,7 +404,7 @@ void DibujarPantalla(Shader& shader, GLuint textura, float x, float y, float z, 
 // =============================================================
 void DibujarCarro(Shader& shader, glm::mat4 base, float giroRuedas,
                   float anguloDireccion, float aperturaDRS,
-                  glm::vec3 pintura, bool dibujarCabeza)
+                  glm::vec3 pintura, bool dibujarCabeza, const ReaccionPiloto& reaccion)
 {
     glm::mat4 model(1);
     glm::mat4 modelCarro(1);
@@ -457,7 +457,7 @@ void DibujarCarro(Shader& shader, glm::mat4 base, float giroRuedas,
     // ---------- Piloto y volante (hijos del chasis) ----------
     // Casco amarillo para el jugador; del color de su carro para los rivales
     glm::vec3 casco = esRival ? pintura : glm::vec3(1.0f, 0.85f, 0.1f);
-    DibujarPiloto(shader, modelCarro, anguloDireccion, dibujarCabeza, casco);
+    DibujarPiloto(shader, modelCarro, anguloDireccion, dibujarCabeza, casco, reaccion);
 }
 
 

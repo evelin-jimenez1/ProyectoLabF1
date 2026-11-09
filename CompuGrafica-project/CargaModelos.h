@@ -5,6 +5,7 @@
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 #include "Shader.h"
+#include "Piloto.h"
 
 // Carga todos los modelos y crea la geometria.
 // Se llama UNA vez, despues de glewInit().
@@ -36,9 +37,11 @@ void DibujarPantalla(Shader& shader, GLuint textura, float x, float y, float z, 
 // aperturaDRS    = grados que se abre el aleron movil (0 = cerrado)
 // pintura        = color de los rivales; (1,1,1) = textura original del jugador
 // dibujarCabeza  = false en la camara onboard (la camara va dentro del casco)
+// reaccion       = como se mueve el piloto segun lo que hace el carro (acelera, frena, gira, choca)
 void DibujarCarro(Shader& shader, glm::mat4 base, float giroRuedas,
                   float anguloDireccion, float aperturaDRS,
-                  glm::vec3 pintura = glm::vec3(1.0f), bool dibujarCabeza = true);
+                  glm::vec3 pintura = glm::vec3(1.0f), bool dibujarCabeza = true,
+                  const ReaccionPiloto& reaccion = ReaccionPiloto());
 
 // Radio de las llantas (m), para calcular cuanto giran
 const float RADIO_LLANTA = 0.344f;

@@ -7,6 +7,7 @@
 #include "Primitivas.h"
 #include "Comisario.h"
 #include "HUD.h"
+#include "Texturas.h"
 
 #include <algorithm>
 #include <cmath>
@@ -19,11 +20,12 @@ static const glm::vec3 CENTRO(45.0f, 0.0f, -75.0f);
 struct Piloto3 { std::string nombre; float tiempo; int textura; bool jugador; };
 static Piloto3 orden[1 + NUM_RIVALES];     // ordenados del 1o al ultimo
 static bool activo = false;
+static float t0 = 0.0f;                    // juego.tiempoJuego cuando se abrio el podio (para animar la copa)
 
 static GLuint texOro, texPlata, texBronce, texBlanco, texNegro;
 static GLuint texCamisa[1 + NUM_RIVALES];  // 0 = jugador, 1.. = rivales
 static GLuint texConfeti[6];
-static GLuint texBanVerde, texBanBlanca, texBanRoja;
+static GLuint texBanderaMexico;            // foto de la bandera con el escudo (images/mexicobandera.jpg)
 
 bool PodioActivo() { return activo; }
 void PodioSalir() { activo = false; }
@@ -44,9 +46,7 @@ void PodioInicializar()
     const float col[6][3] = { {0.95f,0.10f,0.55f}, {1.0f,0.55f,0.05f}, {0.55f,0.20f,0.85f},
                               {0.10f,0.75f,0.80f}, {1.0f,0.85f,0.10f}, {0.20f,0.70f,0.25f} };
     for (int i = 0; i < 6; i++) texConfeti[i] = CrearTexturaColor(col[i][0], col[i][1], col[i][2]);
-    texBanVerde = CrearTexturaColor(0.00f, 0.45f, 0.20f);
-    texBanBlanca = CrearTexturaColor(0.96f, 0.96f, 0.96f);
-    texBanRoja = CrearTexturaColor(0.80f, 0.10f, 0.15f);
+    texBanderaMexico = CargarTextura("images/mexicobandera.jpg");
 }
 
 void PodioActivar()
@@ -64,6 +64,7 @@ void PodioActivar()
 
     std::sort(todos, todos + 1 + NUM_RIVALES, [](const Piloto3& a, const Piloto3& b) { return a.tiempo < b.tiempo; });
     for (int i = 0; i < 1 + NUM_RIVALES; i++) orden[i] = todos[i];
+    t0 = juego.tiempoJuego;
     activo = true;
 }
 
@@ -95,7 +96,13 @@ void PodioDibujar(Shader& shader, float t)
         DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(3.05f, 0.06f, 3.05f)), texBlanco);
     }
 
-    // ---------- Pilotos (festejan con los brazos arriba) ----------
+    // ---------- La copa: el 1o la levanta con las dos manos ----------
+    // k va de 0 (la copa esta frente al 1o) a 1 (la tiene arriba de la cabeza)
+    float tp = juego.tiempoJuego - t0;
+    float k = glm::clamp((tp - 0.6f) / 1.6f, 0.0f, 1.0f);
+    k = k * k * (3.0f - 2.0f * k);
+
+    // ---------- Pilotos (festejan con los brazos arriba; el 1o levanta la copa) ----------
     for (int i = 0; i < 1 + NUM_RIVALES; i++)
     {
         glm::mat4 p;
@@ -105,6 +112,10 @@ void PodioDibujar(Shader& shader, float t)
             p = glm::translate(base, glm::vec3(x[i], h[i] + 0.06f, 0.0f));
             brazo = 140.0f + 20.0f * std::sin(t * 6.0f + i);
             brazoIzq = 140.0f + 20.0f * std::sin(t * 6.0f + i + 2.0f);
+            if (i == 0)   // sube los brazos hasta la vertical para sostener la copa
+            {
+                brazo = brazoIzq = 25.0f + 147.0f * k + 3.0f * k * std::sin(t * 6.0f);
+            }
         }
         else   // el 4o lugar mira desde un lado
         {
@@ -116,25 +127,50 @@ void PodioDibujar(Shader& shader, float t)
                        texCamisa[orden[i].textura]);   // gorra del color de cada piloto
     }
 
-    // ---------- Trofeo (copa dorada) frente al 1o ----------
+    // ---------- Trofeo: copa dorada que sube de la tarima a las manos del 1o ----------
     {
-        glm::mat4 m = glm::translate(base, glm::vec3(0.0f, h[0] + 0.40f, 1.0f));
-        DibujarMalla(shader, mallaCilindro, glm::scale(m, glm::vec3(0.35f, 0.50f, 0.35f)), texOro);
-        m = glm::translate(base, glm::vec3(0.0f, h[0] + 0.85f, 1.0f));
-        DibujarMalla(shader, mallaEsfera, glm::scale(m, glm::vec3(0.55f)), texOro);
+        float bob = 0.07f * k * std::sin(t * 6.0f);                          // se mueve al festejar
+        float bowlY = h[0] + 0.06f + 0.80f + 1.98f * k + bob;               // centro de la copa
+        float z = 1.0f * (1.0f - k);
+        glm::mat4 m = glm::translate(base, glm::vec3(0.0f, bowlY - 0.55f, z));            // base
+        DibujarMalla(shader, mallaCilindro, glm::scale(m, glm::vec3(0.34f, 0.08f, 0.34f)), texOro);
+        m = glm::translate(base, glm::vec3(0.0f, bowlY - 0.32f, z));                       // pie
+        DibujarMalla(shader, mallaCilindro, glm::scale(m, glm::vec3(0.12f, 0.40f, 0.12f)), texOro);
+        m = glm::translate(base, glm::vec3(0.0f, bowlY, z));                               // copa
+        DibujarMalla(shader, mallaEsfera, glm::scale(m, glm::vec3(0.52f, 0.46f, 0.52f)), texOro);
+        for (int lado = -1; lado <= 1; lado += 2)                                          // asas
+        {
+            m = glm::translate(base, glm::vec3(lado * 0.30f, bowlY, z));
+            DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(0.07f, 0.20f, 0.07f)), texOro);
+        }
     }
 
-    // ---------- Bandera de Mexico detras del podio (verde, blanco, rojo) ----------
-    GLuint tb[3] = { texBanVerde, texBanBlanca, texBanRoja };
-    for (int i = 0; i < 3; i++)
+    // ---------- Publico festejando: grupos a los lados del podio, mirando hacia el 1o ----------
+    for (int lado = -1; lado <= 1; lado += 2)
+        for (int fila = 0; fila < 4; fila++)
+            for (int col = 0; col < 5; col++)
+            {
+                int id = (lado > 0 ? 100 : 0) + fila * 5 + col;
+                float r1 = Hash(id * 1.0f + 7.0f), r2 = Hash(id * 1.0f + 57.0f), r3 = Hash(id * 1.0f + 307.0f);
+                float px = lado * (6.9f + col * 1.1f + 0.4f * r1);
+                float pz = -4.2f + fila * 1.2f + 0.4f * r2;
+                float salto = 0.18f * std::fabs(std::sin(t * (3.5f + 2.0f * r3) + id));      // saltan de gusto
+                glm::mat4 q = glm::translate(base, glm::vec3(px, salto, pz));
+                q = glm::rotate(q, std::atan2(px, pz), glm::vec3(0.0f, 1.0f, 0.0f));         // mira hacia el podio
+                float b1 = 120.0f + 40.0f * std::sin(t * 6.0f + id);
+                float b2 = 120.0f + 40.0f * std::sin(t * 6.0f + id + 1.7f);
+                DibujarPersona(shader, q, b1, 0.0f, 0.0f, texConfeti[id % 6], 0, b2, texConfeti[(id + 2) % 6]);
+            }
+
+    // ---------- Bandera de Mexico (con el escudo) detras del podio, entre dos astas ----------
     {
-        glm::mat4 m = glm::translate(base, glm::vec3((i - 1) * 2.4f, 3.6f, -2.6f));
-        DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(2.4f, 4.0f, 0.12f)), tb[i]);
+        glm::mat4 m = glm::translate(base, glm::vec3(0.0f, 4.0f, -2.6f));
+        DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(7.2f, 4.5f, 0.12f)), texBanderaMexico);   // 1200 x 750 = 1.6 : 1
     }
     for (int lado = -1; lado <= 1; lado += 2)
     {
-        glm::mat4 m = glm::translate(base, glm::vec3(lado * 3.8f, 2.8f, -2.6f));
-        DibujarMalla(shader, mallaCilindro, glm::scale(m, glm::vec3(0.12f, 5.6f, 0.12f)), texPlata);
+        glm::mat4 m = glm::translate(base, glm::vec3(lado * 3.9f, 3.3f, -2.6f));
+        DibujarMalla(shader, mallaCilindro, glm::scale(m, glm::vec3(0.12f, 6.6f, 0.12f)), texPlata);
     }
 
     // ---------- Confeti (cae y gira; la posicion sale de una formula, sin guardar estado) ----------

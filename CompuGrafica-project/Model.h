@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <cstdio>
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -155,6 +156,8 @@ private:
 
 			// 1. Diffuse maps
 			vector<Texture> diffuseMaps = this->loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse");
+			if (diffuseMaps.empty())   // material sin imagen: se usa su color Kd (textura de 1 pixel)
+				diffuseMaps.push_back(this->colorTexture(material));
 			textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
 
 			// 2. Specular maps
@@ -164,6 +167,33 @@ private:
 
 		// Return a mesh object created from the extracted mesh data
 		return Mesh(vertices, indices, textures);
+	}
+
+	// Textura de 1 pixel con el color difuso (Kd) del material. Se reutiliza si ya existe ese color.
+	Texture colorTexture(aiMaterial* mat)
+	{
+		aiColor3D kd(0.8f, 0.8f, 0.8f);
+		mat->Get(AI_MATKEY_COLOR_DIFFUSE, kd);
+		unsigned char px[4] = { (unsigned char)(kd.r * 255.0f + 0.5f), (unsigned char)(kd.g * 255.0f + 0.5f),
+								(unsigned char)(kd.b * 255.0f + 0.5f), 255 };
+		char clave[32];
+		snprintf(clave, sizeof(clave), "color:%02x%02x%02x", px[0], px[1], px[2]);
+
+		for (GLuint j = 0; j < textures_loaded.size(); j++)
+			if (textures_loaded[j].path == aiString(clave))
+				return textures_loaded[j];
+
+		Texture texture;
+		glGenTextures(1, &texture.id);
+		glBindTexture(GL_TEXTURE_2D, texture.id);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, px);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		texture.type = "texture_diffuse";
+		texture.path = aiString(clave);
+		textures_loaded.push_back(texture);
+		return texture;
 	}
 
 	// Checks all material textures of a given type and loads the textures if they're not loaded yet.

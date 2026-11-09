@@ -156,12 +156,12 @@ void DibujarPersona(Shader& shader, const glm::mat4& base, float brazo, float an
         m = glm::translate(base, glm::vec3(lado * 0.13f, 0.45f, 0.0f));
         DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(0.20f, 0.90f, 0.22f)), texPantalon);
     }
-    // Cabeza y gorra (hijas del torso)
+    // Cabeza y gorra (hijas del torso). La gorra es blanca o del color indicado (pilotos del podio)
     m = glm::translate(torso, glm::vec3(0.0f, 0.62f, 0.0f));
     DibujarMalla(shader, mallaEsfera, glm::scale(m, glm::vec3(0.30f)), texPiel);
     m = glm::translate(torso, glm::vec3(0.0f, 0.80f, 0.0f));
     DibujarMalla(shader, mallaCilindro, glm::scale(m, glm::vec3(0.32f, 0.10f, 0.32f)), gorra);
-    m = glm::translate(torso, glm::vec3(0.0f, 0.78f, -0.20f));      // visera
+    m = glm::translate(torso, glm::vec3(0.0f, 0.78f, -0.20f));      // visera de la gorra
     DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(0.26f, 0.03f, 0.18f)), gorra);
 
     // Brazo izquierdo (hijo del torso): pegado al cuerpo o levantado (festejo)

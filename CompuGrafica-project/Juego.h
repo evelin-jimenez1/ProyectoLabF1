@@ -28,6 +28,8 @@ struct Carro
     float giroRuedas = 0.0f;    // grados que han rodado las llantas
     float direccion = 0.0f;     // grados de las llantas delanteras (+ = izquierda)
     float aperturaDRS = 0.0f;   // grados que esta abierto el DRS
+    float empuje = 0.0f;        // aceleracion suavizada: -1 frenando fuerte ... +1 acelerando fuerte (para el piloto)
+    float impacto = 0.0f;       // 1 justo despues de un choque, baja solo a 0 (para el piloto)
 };
 
 struct Rival
@@ -51,6 +53,7 @@ struct EstadoJuego
     Carro jugador;
     Rival rivales[NUM_RIVALES];
     EstadoCarrera estado = ESPERANDO_ARRANQUE;
+    float tiempoJuego = 0.0f;       // segundos desde que abrio el juego (oscilaciones del piloto)
 
     // Cronometro
     int   vuelta = 1;

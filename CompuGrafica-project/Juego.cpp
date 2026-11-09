@@ -192,6 +192,7 @@ static void ColisionesRivales()
             Mensaje("CHOQUE CON RIVAL - REBASA POR UN LADO", 2.0f);
             AudioReproducir(SONIDO_CHOQUE);
         }
+        j.impacto = 1.0f;
         esperaChoque = 1.0f;
     }
 }
@@ -272,6 +273,9 @@ void JuegoActualizar(float dt, const Controles& c)
     Carro& j = juego.jugador;
     if (juego.tiempoMensaje > 0.0f) juego.tiempoMensaje -= dt;
     if (esperaChoque > 0.0f) esperaChoque -= dt;
+    juego.tiempoJuego += dt;
+    j.impacto = glm::max(0.0f, j.impacto - 2.5f * dt);     // la sacudida del piloto se apaga sola
+    float velAntes = j.vel;
     juego.tiempoDesdeMeta += dt;
     AnimationDRS(dt);            // avanza los keyframes del DRS (KeyFramesDRS.cpp)
     j.aperturaDRS = drsAngulo;
@@ -315,6 +319,7 @@ void JuegoActualizar(float dt, const Controles& c)
         if (tocaMuro && j.vel > 8.0f)
         {
             j.vel *= 0.65f;
+            j.impacto = 1.0f;
             juego.choquesMuro++;
             Mensaje("CONTACTO CON EL MURO", 1.5f);
             AudioReproducir(SONIDO_CHOQUE);
@@ -325,6 +330,14 @@ void JuegoActualizar(float dt, const Controles& c)
 
     ActualizarRivales(dt);
     if (!juegoEnPits) ColisionesRivales();
+
+    // Aceleracion del jugador (para que el piloto reaccione): +1 = acelera a tope, -1 = frena fuerte o choca
+    if (dt > 1e-4f)
+    {
+        float a = (j.vel - velAntes) / dt;
+        float objetivo = glm::clamp(a > 0.0f ? a / ACELERACION : a / FRENADO, -1.0f, 1.0f);
+        j.empuje += (objetivo - j.empuje) * glm::min(1.0f, 10.0f * dt);
+    }
 
     // ----- Checkpoints y meta -----
     while (juego.sigCheckpoint <= NUM_CHECKPOINTS && j.dist >= distCheckpoint[juego.sigCheckpoint - 1])
@@ -354,13 +367,17 @@ glm::mat4 MatrizCarroMundo(const Carro& c)
 void JuegoDibujarCarros(Shader& shader, bool dibujarCabezaJugador)
 {
     const Carro& j = juego.jugador;
+    ReaccionPiloto rj = { j.empuje, j.impacto, j.vel / VEL_MAX, juego.tiempoJuego };
     DibujarCarro(shader, MatrizCarroMundo(j), j.giroRuedas, j.direccion, j.aperturaDRS,
-                 glm::vec3(1.0f), dibujarCabezaJugador);
+                 glm::vec3(1.0f), dibujarCabezaJugador, rj);
 
     for (const Rival& r : juego.rivales)
         if (r.activo)
+        {
+            ReaccionPiloto rr = { 0.0f, 0.0f, r.carro.vel / VEL_MAX, juego.tiempoJuego };
             DibujarCarro(shader, MatrizCarroMundo(r.carro), r.carro.giroRuedas, r.carro.direccion,
-                         0.0f, r.color, true);
+                         0.0f, r.color, true, rr);
+        }
 }
 
 

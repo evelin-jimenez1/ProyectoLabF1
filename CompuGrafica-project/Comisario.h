@@ -26,7 +26,8 @@ void ComisarioDibujar(Shader& shader, float tiempo);
 // Persona articulada (la usan el comisario, los mecanicos de boxes y los pilotos del podio).
 // 'base' = en el piso, mirando hacia -Z. brazo / antebrazo = brazo derecho (grados);
 // brazoIzq = brazo izquierdo levantado (grados, 0 = pegado al cuerpo).
-// texGorraColor = textura de la gorra (0 = blanca).
+// texGorraColor = textura de la gorra (0 = blanca). Los pilotos del podio llevan gorra de su color;
+// el casco solo se usa en la carrera (ver Piloto.cpp).
 // texChaleco = textura de la camisa. texBandera = textura de la bandera (0 = sin asta ni bandera).
 // bandera = giro de la tela alrededor del asta.
 #include <glm/glm.hpp>

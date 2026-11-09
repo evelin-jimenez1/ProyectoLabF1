@@ -370,10 +370,17 @@ int main()
         }
         else if (modoCamara == 2)
         {
-            // Onboard: en los ojos del piloto (por eso no se dibuja su cabeza)
+            // Onboard: en los ojos del piloto (por eso no se dibuja su cabeza).
+            // La vista siente lo mismo que el piloto: al frenar cabecea hacia abajo, al acelerar sube un poco,
+            // en las curvas se ladea y despues de un choque se sacude.
+            const Carro& cj = juego.jugador;
+            float sac = cj.impacto * std::sin(juego.tiempoJuego * 34.0f);
+            float vib = (cj.vel / 45.0f) * std::sin(juego.tiempoJuego * 41.0f);
             camPos = glm::vec3(baseCarro * glm::vec4(0.0f, 0.90f, -0.24f, 1.0f));
-            glm::vec3 objetivo = glm::vec3(baseCarro * glm::vec4(0.0f, 0.75f, -20.0f, 1.0f));
-            view = glm::lookAt(camPos, objetivo, glm::vec3(0.0f, 1.0f, 0.0f));
+            glm::vec3 objetivo = glm::vec3(baseCarro * glm::vec4(0.35f * sac, 0.75f - 0.9f * cj.empuje + 0.25f * sac + 0.04f * vib, -20.0f, 1.0f));
+            float rollRad = glm::radians(-cj.direccion * 0.3f + 1.5f * sac);
+            glm::vec3 arriba = glm::normalize(glm::vec3(baseCarro * glm::vec4(std::sin(rollRad), std::cos(rollRad), 0.0f, 0.0f)));
+            view = glm::lookAt(camPos, objetivo, arriba);
         }
         else
         {
