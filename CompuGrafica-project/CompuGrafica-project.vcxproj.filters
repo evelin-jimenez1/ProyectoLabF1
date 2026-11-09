@@ -86,6 +86,9 @@
     <ClInclude Include="Shader.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
+    <ClInclude Include="KeyFramesFermin.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DiaDeMuertos.cpp">
@@ -122,6 +125,9 @@
       <Filter>Archivos de origen</Filter>
     </ClCompile>
     <ClCompile Include="Spline.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
+    <ClCompile Include="KeyFramesFermin.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
   </ItemGroup>
@@ -162,18 +168,6 @@
     <ClCompile Include="Podio.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
-    <None Include="Shader\cielo.vs">
-      <Filter>Archivos de origen\shaders</Filter>
-    </None>
-    <None Include="Shader\cielo.frag">
-      <Filter>Archivos de origen\shaders</Filter>
-    </None>
-    <None Include="Shader\sombra.vs">
-      <Filter>Archivos de origen\shaders</Filter>
-    </None>
-    <None Include="Shader\sombra.frag">
-      <Filter>Archivos de origen\shaders</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Recap.h">

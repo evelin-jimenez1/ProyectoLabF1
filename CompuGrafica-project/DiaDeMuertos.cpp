@@ -41,7 +41,7 @@ struct Calavera {
 Calavera calaveras[] = {
 	// posicion                          escala  radio
 	{ glm::vec3(150.0f, 0.0f,  -25.0f), 60.0f, 100.0f, 0, 0, 0, QUIETA, 0, false }, // GIGANTE: centro del circuito
-	{ glm::vec3(-40.0f, 0.0f, -185.0f), 30.0f,  55.0f, 0, 0, 0, QUIETA, 0, false }, // junto a la recta principal
+	{ glm::vec3(-70.0f, 0.0f, -185.0f), 30.0f,  55.0f, 0, 0, 0, QUIETA, 0, false }, // junto a la recta principal
 	{ glm::vec3(-210.0f, 0.0f, -205.0f), 30.0f,  55.0f, 0, 0, 0, QUIETA, 0, false }, // afuera de la curva 17 (Peraltada)
 };
 const int   N_CALAVERAS = sizeof(calaveras) / sizeof(calaveras[0]);

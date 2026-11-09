@@ -60,6 +60,7 @@
 #include "Ambiente.h"
 #include "Sombras.h"
 #include "Estadio.h"
+#include "KeyFramesFermin.h"
 #include "Comisario.h"
 #include "Boxes.h"
 #include "Podio.h"
@@ -260,6 +261,7 @@ int main()
     SombrasInicializar();
     EstadioInicializar();
     ComisarioInicializar();
+    CargarKeyFramesFermin();
     BoxesInicializar();
     PodioInicializar();
     RecapInicializar();
@@ -301,6 +303,7 @@ int main()
 
         AmbienteActualizar(deltaTime);
         ComisarioActualizar(deltaTime);   // keyframes de la bandera a cuadros
+		AnimationFermin(deltaTime); // keyframes de Fermin
 
         // Postes: al prenderlos se reinicia la animacion de parpadeo
         if (lucesActivas && !lucesPrevias) tiempoLuces = 0.0f;

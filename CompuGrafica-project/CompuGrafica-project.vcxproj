@@ -32,6 +32,7 @@
   <ItemGroup>
     <ClInclude Include="DiaDeMuertos.h" />
     <ClInclude Include="Audio.h" />
+    <ClInclude Include="KeyFramesFermin.h" />
     <ClInclude Include="Recap.h" />
     <ClInclude Include="Podio.h" />
     <ClInclude Include="Boxes.h" />
@@ -53,6 +54,7 @@
   <ItemGroup>
     <ClCompile Include="DiaDeMuertos.cpp" />
     <ClCompile Include="Audio.cpp" />
+    <ClCompile Include="KeyFramesFermin.cpp" />
     <ClCompile Include="Recap.cpp" />
     <ClCompile Include="Podio.cpp" />
     <ClCompile Include="Boxes.cpp" />
