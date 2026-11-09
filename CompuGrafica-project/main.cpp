@@ -5,7 +5,20 @@
 //    - Los modelos estan en       CargaModelos.h / CargaModelos.cpp
 //    - La spline de la pista en   Spline.h / Spline.cpp
 //
-//  Controles: W A S D = mover | Shift = rapido | mouse = mirar | ESC = salir
+//    - Mecanicas de juego en       Juego.h / Juego.cpp
+//    - HUD y marcador en           HUD.h / HUD.cpp
+//    - Piloto en                   Piloto.h / Piloto.cpp
+//    - Zona de neumaticos en       ZonaNeumaticos.h / .cpp
+//    - Keyframes del DRS en        KeyFramesDRS.h / .cpp
+//    - Dia de Muertos en           DiaDeMuertos.h / .cpp
+//    - Sonido en                   Audio.h / Audio.cpp
+//
+//  Controles:
+//    C           = cambiar camara (tercera persona -> onboard -> libre)
+//    Camara libre: W A S D = mover | Shift = rapido | mouse = mirar
+//    Con el carro: W = acelerar | S = frenar | A D = moverse a los lados
+//    R = abrir / cerrar DRS | T = reiniciar la vuelta
+//    F = encender postes | L = ver spline | ESC = salir
 // =============================================================
 
 // Std. Includes
@@ -31,6 +44,15 @@
 #include "Texturas.h"
 #include "CargaModelos.h"
 #include "Spline.h"
+#include "Primitivas.h"
+#include "Piloto.h"
+#include "ZonaNeumaticos.h"
+#include "Juego.h"
+#include "HUD.h"
+#include "Audio.h"
+#include "KeyFramesDRS.h"
+#include "DiaDeMuertos.h"
+
 
 // Properties
 const GLuint WIDTH = 1280, HEIGHT = 720;
@@ -56,6 +78,10 @@ Camera camera(glm::vec3(0.0f, 100.0f, 250.0f));
 bool keys[1024];
 GLfloat lastX = WIDTH / 2.0f, lastY = HEIGHT / 2.0f;
 bool firstMouse = true;
+
+// ---------- Camaras ----------
+// 0 = libre, 1 = tercera persona (detras del carro), 2 = onboard (cabina)
+int modoCamara = 1;
 
 
 // Video de la pantalla (animacion por cuadros)
@@ -196,6 +222,15 @@ int main()
     GLuint vaoSpline = CrearLineaSpline(numPuntosSpline);
     Shader lampShader("Shader/lamp.vs", "Shader/lamp.frag");   // color blanco, de las practicas
 
+    // ---------- Juego, piloto, utileria, Dia de Muertos, HUD y sonido ----------
+    PrimitivasInicializar();
+    PilotoInicializar();
+    ZonaNeumaticosInicializar();
+    DiaDeMuertosInicializar();
+    JuegoInicializar();
+    HUDInicializar();
+    AudioInicializar();
+
     // ---------- Texturas (Texturas.cpp) ----------
     GLuint texAsfalto = CargarTextura("images/asfalto.png");
     GLuint texPasto = CargarTextura("images/pasto.png");
@@ -240,19 +275,55 @@ int main()
         glfwPollEvents();
         DoMovement();
 
+        // ----- Juego: el carro solo se maneja en las camaras del carro -----
+        Controles controles;
+        if (modoCamara != 0)
+        {
+            controles.acelerar = keys[GLFW_KEY_W] || keys[GLFW_KEY_UP];
+            controles.frenar = keys[GLFW_KEY_S] || keys[GLFW_KEY_DOWN];
+            controles.izquierda = keys[GLFW_KEY_A] || keys[GLFW_KEY_LEFT];
+            controles.derecha = keys[GLFW_KEY_D] || keys[GLFW_KEY_RIGHT];
+        }
+        JuegoActualizar(deltaTime, controles);
+
+        // ----- Calaveras: brincan cuando pasa el carro (maquina de estados) -----
+        glm::mat4 baseCarro = MatrizCarroMundo(juego.jugador);
+        AnimarCalaveras(deltaTime, glm::vec3(baseCarro[3]));
+
         glClearColor(0.53f, 0.81f, 0.92f, 1.0f);   // cielo
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         shader.Use();
 
-        glm::mat4 view = camera.GetViewMatrix();
+        // ----- Camara segun el modo -----
+        glm::mat4 view;
+        glm::vec3 camPos;
+        if (modoCamara == 1)
+        {
+            // Tercera persona / TV: detras y arriba del carro
+            camPos = glm::vec3(baseCarro * glm::vec4(0.0f, 3.2f, 9.0f, 1.0f));
+            glm::vec3 objetivo = glm::vec3(baseCarro * glm::vec4(0.0f, 1.0f, -4.0f, 1.0f));
+            view = glm::lookAt(camPos, objetivo, glm::vec3(0.0f, 1.0f, 0.0f));
+        }
+        else if (modoCamara == 2)
+        {
+            // Onboard: en los ojos del piloto (por eso no se dibuja su cabeza)
+            camPos = glm::vec3(baseCarro * glm::vec4(0.0f, 0.90f, -0.24f, 1.0f));
+            glm::vec3 objetivo = glm::vec3(baseCarro * glm::vec4(0.0f, 0.75f, -20.0f, 1.0f));
+            view = glm::lookAt(camPos, objetivo, glm::vec3(0.0f, 1.0f, 0.0f));
+        }
+        else
+        {
+            camPos = camera.GetPosition();
+            view = camera.GetViewMatrix();
+        }
         glUniformMatrix4fv(glGetUniformLocation(shader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
         glUniformMatrix4fv(glGetUniformLocation(shader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
 
         // Enviar variables de Iluminacion
         glUniform3f(glGetUniformLocation(shader.Program, "lightPos"), lightPos.x, lightPos.y, lightPos.z);
         glUniform3f(glGetUniformLocation(shader.Program, "lightColor"), lightColor.x, lightColor.y, lightColor.z);
-        glUniform3f(glGetUniformLocation(shader.Program, "viewPos"), camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
+        glUniform3f(glGetUniformLocation(shader.Program, "viewPos"), camPos.x, camPos.y, camPos.z);
 
         // ----- Focos de los postes (se mandan cada cuadro por la animacion) -----
         for (int i = 0; i < NUM_POSTES; i++) {
@@ -336,6 +407,15 @@ int main()
         DibujarPoste(shader, -170.0f, 0.0f, -120.0f, 0.0f);
 
 
+        // ----- Monoplaza del jugador y rivales (modelado jerarquico) -----
+        JuegoDibujarCarros(shader, modoCamara != 2);
+
+        // ----- Zona de neumaticos (zona de apoyo) -----
+        DibujarZonaNeumaticos(shader);
+
+        // ----- Dia de Muertos: calaveras, cempasuchil y petalos -----
+        DibujarDiaDeMuertos(shader);
+
         // ---------- Pantallas alrededor del circuito ----------
         // (x, y, z, rotacion en Y).
         DibujarPantalla(shader, texPantalla[cuadroActual], -57.1f, 0.0f, -134.7f, -98.0f); // Recta principal
@@ -373,9 +453,16 @@ int main()
             glBindVertexArray(0);
         }
 
+        // ----- Papel picado, tiempo en el marcador, letrero de la zona y HUD -----
+        DibujarPapelPicado(projection, view, currentFrame);
+        DibujarTiempoMarcador(projection * view);
+        DibujarLetreroZona(projection * view);
+        DibujarHUDJuego(SCREEN_WIDTH, SCREEN_HEIGHT, modoCamara);
+
         glfwSwapBuffers(window);
     }
 
+    AudioCerrar();
     LiberarModelos();
     glfwTerminate();
     return 0;
@@ -384,6 +471,8 @@ int main()
 // Moves/alters the camera positions based on user input
 void DoMovement()
 {
+    if (modoCamara != 0) return;   // con el carro, WASD lo controla el juego (Juego.cpp)
+
     // Con Shift se mueve 15 veces mas rapido (la pista mide ~500)
     int pasos = (keys[GLFW_KEY_LEFT_SHIFT] || keys[GLFW_KEY_RIGHT_SHIFT]) ? 15 : 1;
 
@@ -414,6 +503,18 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 
 	// L: activar / desactivar luces de los postes
     if (key == GLFW_KEY_F && action == GLFW_PRESS) { lucesActivas = true; tiempoLuces = 0.0f; }
+
+    // C: cambiar de camara (tercera persona -> onboard -> libre)
+    if (key == GLFW_KEY_C && action == GLFW_PRESS)
+        modoCamara = (modoCamara + 1) % 3;
+
+    // R: abrir / cerrar DRS (solo en las rectas)
+    if (key == GLFW_KEY_R && action == GLFW_PRESS)
+        JuegoBotonDRS();
+
+    // T: reiniciar la vuelta
+    if (key == GLFW_KEY_T && action == GLFW_PRESS)
+        JuegoReiniciar();
 }
 
 void MouseCallback(GLFWwindow* window, double xPos, double yPos)
@@ -431,7 +532,8 @@ void MouseCallback(GLFWwindow* window, double xPos, double yPos)
     lastX = (GLfloat)xPos;
     lastY = (GLfloat)yPos;
 
-    camera.ProcessMouseMovement(xOffset, yOffset);
+    if (modoCamara == 0)   // el mouse solo mueve la camara libre
+        camera.ProcessMouseMovement(xOffset, yOffset);
 }
 
 

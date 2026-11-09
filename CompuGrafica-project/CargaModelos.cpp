@@ -3,6 +3,8 @@
 //  - Pista: modelo .obj de Blender cargado con Model.h (Assimp)
 //  - Pasto: plano hecho a mano, como el cuadrado de la practica
 //           de texturizado pero acostado en el suelo
+//  - Monoplaza: modelado jerarquico (chasis -> llantas, alerones,
+//           DRS y piloto), igual que el cuerpo del perro
 // =============================================================
 #include "CargaModelos.h"
 
@@ -16,6 +18,9 @@
 
 // Para dibujar la pantalla de video
 #include "Texturas.h"
+
+// Piloto del monoplaza (hijo del chasis)
+#include "Piloto.h"
 
 // ---------------- Modelos ----------------
 // Se guardan como punteros porque un Model solo se puede crear
@@ -42,6 +47,36 @@ const float PANTALLA_ALTO = 7.3f;  // Z
 const float PANTALLA_CENTROY = 8.433f;  // Z
 const float PANTALLA_FRENTE = 0.42f;  // -(Y) + 0.01
 
+// ---------------- Monoplaza ----------------
+// Cada parte es un .obj separado, como las partes del perro
+Model* Chasis = nullptr;       // el auto sin llantas ni DRS
+Model* Aleron = nullptr;       // aleron trasero fijo
+Model* DRS = nullptr;          // aleta del DRS
+Model* Llanta_DI = nullptr;    // delantera izquierda
+Model* Llanta_DD = nullptr;    // delantera derecha
+Model* Llanta_TI = nullptr;    // trasera izquierda
+Model* Llanta_TD = nullptr;    // trasera derecha
+
+// ---------------- Dia de Muertos ----------------
+Model* ModeloCalavera = nullptr;   // calavera de azucar (mide 1 m de alto)
+
+// Posicion de cada llanta respecto al chasis (= el origen de cada llanta).
+// Valores de posiciones_cpp.txt, exportados de CARROLab.blend
+// Orden: delantera izq, delantera der, trasera izq, trasera der
+glm::vec3 posLlanta[4] = {
+    glm::vec3(-1.566f, -0.520f, -3.850f),
+    glm::vec3(-0.126f, -0.520f, -3.850f),
+    glm::vec3(-1.566f, -0.520f, -0.364f),
+    glm::vec3(-0.126f, -0.520f, -0.364f)
+};
+
+// DRS: drs.obj ya viene en su lugar; gira sobre su orilla de enfrente (la bisagra)
+glm::vec3 posDRS = glm::vec3(-0.847f, 0.0f, 0.0f);
+const float DRS_SENTIDO = -1.0f;    // -1 = la orilla de atras sube. Si se abre al reves, poner 1
+
+// llanta_TD.obj vino estirada en Z (mide 1.10 en vez de 0.69): se corrige al dibujarla
+const float CORRECCION_TD_Z = 0.344f / 0.550f;
+
 
 // ---------------- Pasto (plano) ----------------
 static GLuint VAO, VBO, EBO;
@@ -65,6 +100,18 @@ void CargarModelos()
     texReversoPantalla = CargarTextura("Models/fibra.jpg");
     manecillaHoras = new Model((char*)"Models/Manecilla_Horas.obj");
     manecillaMinutos = new Model((char*)"Models/Manecilla_Minutos.obj");
+
+    // ----- Monoplaza -----
+    Chasis = new Model((char*)"Models/chasis.obj");
+    Aleron = new Model((char*)"Models/aleron.obj");
+    DRS = new Model((char*)"Models/drs.obj");
+    Llanta_DI = new Model((char*)"Models/llanta_DI.obj");
+    Llanta_DD = new Model((char*)"Models/llanta_DD.obj");
+    Llanta_TI = new Model((char*)"Models/llanta_TI.obj");
+    Llanta_TD = new Model((char*)"Models/llanta_TD.obj");
+
+    // ----- Dia de Muertos -----
+    ModeloCalavera = new Model((char*)"Models/calaverita.obj");
 
 
     // ----- Pasto: plano de 1000 x 1000 -----
@@ -180,6 +227,15 @@ void LiberarModelos()
 
     delete manecillaMinutos;
     manecillaMinutos = nullptr;
+
+    delete Chasis;     Chasis = nullptr;
+    delete Aleron;     Aleron = nullptr;
+    delete DRS;        DRS = nullptr;
+    delete Llanta_DI;  Llanta_DI = nullptr;
+    delete Llanta_DD;  Llanta_DD = nullptr;
+    delete Llanta_TI;  Llanta_TI = nullptr;
+    delete Llanta_TD;  Llanta_TD = nullptr;
+    delete ModeloCalavera;  ModeloCalavera = nullptr;
 
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
@@ -329,4 +385,79 @@ void DibujarPantalla(Shader& shader, GLuint textura, float x, float y, float z, 
     glBindVertexArray(0);
 
     glUniform1f(glGetUniformLocation(shader.Program, "brilloPropio"), 0.0f);
+}
+
+
+// =============================================================
+//  Monoplaza con modelado jerarquico (igual que el perro):
+//
+//      base (posicion en la pista)
+//       └─ chasis                      (nodo padre)
+//           ├─ aleron trasero          (fijo)
+//           ├─ DRS                     (gira en su bisagra, keyframes)
+//           ├─ llantas delanteras      (giran con el volante y ruedan)
+//           ├─ llantas traseras        (ruedan)
+//           └─ piloto y volante        (ver Piloto.cpp)
+// =============================================================
+void DibujarCarro(Shader& shader, glm::mat4 base, float giroRuedas,
+                  float anguloDireccion, float aperturaDRS,
+                  glm::vec3 pintura, bool dibujarCabeza)
+{
+    glm::mat4 model(1);
+    glm::mat4 modelCarro(1);
+    GLint modelLoc = glGetUniformLocation(shader.Program, "model");
+    glUniform2f(glGetUniformLocation(shader.Program, "repetir"), 1.0f, 1.0f);
+    glUniform1f(glGetUniformLocation(shader.Program, "brilloPropio"), 0.0f);
+
+    // Los rivales usan el mismo modelo con otra pintura
+    bool esRival = (pintura != glm::vec3(1.0f));
+    glUniform1f(glGetUniformLocation(shader.Program, "usarTinte"), esRival ? 1.0f : 0.0f);
+    glUniform3f(glGetUniformLocation(shader.Program, "tinte"), pintura.r, pintura.g, pintura.b);
+
+    // ---------- Chasis (padre) ----------
+    // El origen del chasis no esta al centro del carro: usamos el punto
+    // medio entre las 4 llantas, a ras del piso
+    glm::vec3 centro = (posLlanta[0] + posLlanta[1] + posLlanta[2] + posLlanta[3]) / 4.0f;
+    centro.y -= RADIO_LLANTA;
+    modelCarro = glm::translate(base, -centro);
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelCarro));
+    Chasis->Draw(shader);
+    Aleron->Draw(shader);   // fijo: usa la misma matriz del chasis
+    glUniform1f(glGetUniformLocation(shader.Program, "usarTinte"), 0.0f);   // lo demas no se pinta
+
+    // ---------- DRS (hijo del chasis, gira en su bisagra) ----------
+    model = glm::translate(modelCarro, posDRS);
+    model = glm::rotate(model, glm::radians(DRS_SENTIDO * aperturaDRS), glm::vec3(1.0f, 0.0f, 0.0f));
+    model = glm::translate(model, -posDRS);
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    DRS->Draw(shader);
+
+    // ---------- Llantas (como las patas del perro) ----------
+    Model* llantas[4] = { Llanta_DI, Llanta_DD, Llanta_TI, Llanta_TD };
+    for (int i = 0; i < 4; i++)
+    {
+        model = glm::translate(modelCarro, posLlanta[i]);
+        if (i < 2)   // las delanteras giran con el volante
+            model = glm::rotate(model, glm::radians(anguloDireccion), glm::vec3(0.0f, 1.0f, 0.0f));
+        // el carro avanza hacia -Z: para rodar hacia adelante se gira en -X
+        model = glm::rotate(model, glm::radians(-giroRuedas), glm::vec3(1.0f, 0.0f, 0.0f));
+        if (i == 3)  // arregla el .obj estirado
+            model = glm::scale(model, glm::vec3(1.0f, 1.0f, CORRECCION_TD_Z));
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+        llantas[i]->Draw(shader);
+    }
+
+    // ---------- Piloto y volante (hijos del chasis) ----------
+    // Casco amarillo para el jugador; del color de su carro para los rivales
+    glm::vec3 casco = esRival ? pintura : glm::vec3(1.0f, 0.85f, 0.1f);
+    DibujarPiloto(shader, modelCarro, anguloDireccion, dibujarCabeza, casco);
+}
+
+
+// Calavera de azucar (la animacion esta en DiaDeMuertos.cpp)
+void DibujarModeloCalavera(Shader& shader, glm::mat4 model)
+{
+    glUniform2f(glGetUniformLocation(shader.Program, "repetir"), 1.0f, 1.0f);
+    glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+    ModeloCalavera->Draw(shader);
 }

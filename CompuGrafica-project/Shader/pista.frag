@@ -15,6 +15,11 @@ uniform vec3 lightColor;
 
 uniform float brilloPropio;   // 0 = usa la luz normal, 1 = se ve con su propio color
 
+// Pintura de los autos rivales: 0 = textura normal, 1 = se pinta del color 'tinte'
+// (conserva el dibujo de la textura, solo cambia el color)
+uniform float usarTinte;
+uniform vec3 tinte;
+
 #define NUM_FOCOS 19 // 18 de los postes + 1 del letrero (letrero siempre encendido)
 struct SpotLight {
     vec3 position;
@@ -69,6 +74,11 @@ void main()
     // Multiplicador de coordenadas UV
     vec2 finalTexCoords = vec2(TexCoords.x * repetir.x, TexCoords.y * repetir.y);
     vec4 texColor = texture(texture_diffuse1, finalTexCoords);
+    if (usarTinte > 0.5)
+    {
+        float brillo = dot(texColor.rgb, vec3(0.299, 0.587, 0.114));
+        texColor.rgb = tinte * (0.35 + brillo * 1.4);
+    }
     
     // Combinar luz con la textura
     vec3 luzFocos = vec3(0.0);

@@ -3,6 +3,7 @@
 //  CargaModelos: modelos .obj (con Assimp) y geometria hecha a mano
 // =============================================================
 #include <GL/glew.h>
+#include <glm/glm.hpp>
 #include "Shader.h"
 
 // Carga todos los modelos y crea la geometria.
@@ -23,6 +24,25 @@ void DibujarPoste(Shader shader, float x, float y, float z, float rotY);
 void DibujarAltar(Shader shader, float x, float y, float z, float rotY, float escala);
 void DibujarFilaBarreras(Shader shader, float xIni, float zIni, float xFin, float zFin, bool voltear);
 void DibujarPantalla(Shader& shader, GLuint textura, float x, float y, float z, float rotY);
+
+// ---------- Monoplaza (modelado jerarquico) ----------
+// base           = matriz del carro en el mundo (posicion + rotacion).
+//                  El origen de 'base' queda en el PISO, al centro del carro,
+//                  y el carro mira hacia -Z (igual que SplineAnguloY).
+// giroRuedas     = grados que han rodado las llantas (avance / radio)
+// anguloDireccion= grados que giran las llantas delanteras (+ = izquierda)
+// aperturaDRS    = grados que se abre el aleron movil (0 = cerrado)
+// pintura        = color de los rivales; (1,1,1) = textura original del jugador
+// dibujarCabeza  = false en la camara onboard (la camara va dentro del casco)
+void DibujarCarro(Shader& shader, glm::mat4 base, float giroRuedas,
+                  float anguloDireccion, float aperturaDRS,
+                  glm::vec3 pintura = glm::vec3(1.0f), bool dibujarCabeza = true);
+
+// Radio de las llantas (m), para calcular cuanto giran
+const float RADIO_LLANTA = 0.344f;
+
+// Calavera de azucar con su matriz ya armada (ver DiaDeMuertos.cpp)
+void DibujarModeloCalavera(Shader& shader, glm::mat4 model);
 
 // Libera la memoria al cerrar el programa
 void LiberarModelos();
