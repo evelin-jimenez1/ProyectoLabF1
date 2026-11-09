@@ -6,10 +6,12 @@ layout (location = 2) in vec2 texCoords;
 out vec3 FragPos;
 out vec3 Normal;
 out vec2 TexCoords;
+out vec4 FragPosLightSpace;   // posicion del fragmento visto desde el sol (sombras)
 
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
+uniform mat4 lightSpaceMatrix;
 
 void main()
 {
@@ -19,4 +21,5 @@ void main()
     // Matriz normal para evitar deformación de la luz al escalar objetos
     Normal = mat3(transpose(inverse(model))) * normal;
     TexCoords = texCoords;
+    FragPosLightSpace = lightSpaceMatrix * vec4(FragPos, 1.0);
 }

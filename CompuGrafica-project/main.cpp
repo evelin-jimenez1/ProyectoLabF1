@@ -12,13 +12,16 @@
 //    - Keyframes del DRS en        KeyFramesDRS.h / .cpp
 //    - Dia de Muertos en           DiaDeMuertos.h / .cpp
 //    - Sonido en                   Audio.h / Audio.cpp
+//    - Dia / atardecer / noche en  Ambiente.h / Ambiente.cpp
+//    - Sombras del sol en          Sombras.h / Sombras.cpp
 //
 //  Controles:
 //    C           = cambiar camara (tercera persona -> onboard -> libre)
 //    Camara libre: W A S D = mover | Shift = rapido | mouse = mirar
 //    Con el carro: W = acelerar | S = frenar | A D = moverse a los lados
 //    R = abrir / cerrar DRS | T = reiniciar la vuelta
-//    F = encender postes | L = ver spline | ESC = salir
+//    F = encender / apagar postes | N = dia / atardecer / noche
+//    B = pedir boxes (pit stop) | P = podio | L = ver spline | ESC = salir
 // =============================================================
 
 // Std. Includes
@@ -52,6 +55,12 @@
 #include "Audio.h"
 #include "KeyFramesDRS.h"
 #include "DiaDeMuertos.h"
+#include "Ambiente.h"
+#include "Sombras.h"
+#include "Estadio.h"
+#include "Comisario.h"
+#include "Boxes.h"
+#include "Podio.h"
 
 
 // Properties
@@ -71,7 +80,7 @@ const float REPETIR_ASFALTO_V = 60.0f;
 const float REPETIR_PASTO = 100.0f;
 
 // Mostrar la linea blanca de la spline (tecla L la prende/apaga)
-bool verSpline = true;
+bool verSpline = false;
 
 // Camera (arriba y alejada, porque la pista es grande)
 Camera camera(glm::vec3(0.0f, 100.0f, 250.0f));
@@ -145,7 +154,9 @@ const float ALTURA_FOCO_ARRIBA = 1.34f;   // cuanto mas arriba esta el foco de a
 // ---------- Animacion de encendido  ----------
 // Keyframes del parpadeo donde 1 es prendido y 0 apagado
 float patronParpadeo[10] = { 1, 0, 0, 1, 0, 1, 1, 0, 1, 0 };
-bool  lucesActivas = false;   // se activa con F
+bool  lucesActivas = false;   // F las prende / apaga (N las ajusta al cambiar de ambiente)
+bool  lucesPrevias = false;
+bool  podioMostrado = false;   // para no volver a abrir el podio apenas se cierra
 float tiempoLuces = 0.0f;
 
 // Regresa la intensidad (0 o 1) de un grupo de focos segun el tiempo.
@@ -230,6 +241,13 @@ int main()
     JuegoInicializar();
     HUDInicializar();
     AudioInicializar();
+    AmbienteInicializar();
+    SombrasInicializar();
+    EstadioInicializar();
+    ComisarioInicializar();
+    BoxesInicializar();
+    PodioInicializar();
+    lucesActivas = (AmbienteModo() != AMB_DIA);   // de noche / atardecer los postes arrancan prendidos
 
     // ---------- Texturas (Texturas.cpp) ----------
     GLuint texAsfalto = CargarTextura("images/asfalto.png");
@@ -247,9 +265,7 @@ int main()
     glm::mat4 projection = glm::perspective(glm::radians(camera.GetZoom()),
         (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 2000.0f);
 
-    // Propiedades del Sol Luz Direccionaly puntual
-    glm::vec3 lightPos(0.0f, 300.0f, 0.0f); // Sol alto en el centro del mapa
-    glm::vec3 lightColor(1.0f, 0.95f, 0.8f); // Luz ligeramente amarilla/calida
+    // La luz del sol (direccion, color, sombras) viene de Ambiente.cpp
 
     
 
@@ -268,9 +284,15 @@ int main()
             cuadroActual = (cuadroActual + 1) % NUM_CUADROS;   // al llegar al 50 reinicia
         }
 
+        AmbienteActualizar(deltaTime);
+        ComisarioActualizar(deltaTime);   // keyframes de la bandera a cuadros
+
+        // Postes: al prenderlos se reinicia la animacion de parpadeo
+        if (lucesActivas && !lucesPrevias) tiempoLuces = 0.0f;
+        lucesPrevias = lucesActivas;
         if (lucesActivas) tiempoLuces += deltaTime;
-        float intAbajo = IntensidadGrupo(tiempoLuces, 0.0f);  // abajo: empieza en 0 s
-        float intArriba = IntensidadGrupo(tiempoLuces, 3.0f);  // arriba: empieza a los 3 s
+        float intAbajo = lucesActivas ? IntensidadGrupo(tiempoLuces, 0.0f) : 0.0f;  // abajo: empieza en 0 s
+        float intArriba = lucesActivas ? IntensidadGrupo(tiempoLuces, 3.0f) : 0.0f; // arriba: empieza a los 3 s
 
         glfwPollEvents();
         DoMovement();
@@ -284,13 +306,24 @@ int main()
             controles.izquierda = keys[GLFW_KEY_A] || keys[GLFW_KEY_LEFT];
             controles.derecha = keys[GLFW_KEY_D] || keys[GLFW_KEY_RIGHT];
         }
+        if (PodioActivo()) controles = Controles();   // en el podio el carro no se maneja
+        BoxesFiltrarControles(controles);       // en boxes el carro se maneja solo
         JuegoActualizar(deltaTime, controles);
+        BoxesActualizar(deltaTime);             // pit stop: carril, parada y salida
+        if (!podioMostrado && juego.vuelta > VUELTAS_CARRERA) { PodioActivar(); podioMostrado = true; }
 
         // ----- Calaveras: brincan cuando pasa el carro (maquina de estados) -----
         glm::mat4 baseCarro = MatrizCarroMundo(juego.jugador);
         AnimarCalaveras(deltaTime, glm::vec3(baseCarro[3]));
 
-        glClearColor(0.53f, 0.81f, 0.92f, 1.0f);   // cielo
+        // ----- Sombras: los monoplazas vistos desde el sol (el mapa sigue al jugador) -----
+        const ParamsAmbiente& amb = AmbienteParams();
+        glm::mat4 lightSpace(1.0f);
+        if (amb.sombras > 0.01f)
+            lightSpace = SombrasRender(glm::vec3(baseCarro[3]), amb.solDir,
+                [&](Shader& sombra) { JuegoDibujarCarros(sombra, true); });
+
+        glClearColor(amb.horizonte.r, amb.horizonte.g, amb.horizonte.b, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         shader.Use();
@@ -298,7 +331,11 @@ int main()
         // ----- Camara segun el modo -----
         glm::mat4 view;
         glm::vec3 camPos;
-        if (modoCamara == 1)
+        if (PodioActivo())
+        {
+            view = PodioVista(currentFrame, camPos);   // camara orbital alrededor del podio
+        }
+        else if (modoCamara == 1)
         {
             // Tercera persona / TV: detras y arriba del carro
             camPos = glm::vec3(baseCarro * glm::vec4(0.0f, 3.2f, 9.0f, 1.0f));
@@ -317,12 +354,17 @@ int main()
             camPos = camera.GetPosition();
             view = camera.GetViewMatrix();
         }
+
+        // ----- Cielo (degradado, sol y estrellas) -----
+        AmbienteDibujarCielo(projection, view);
+        shader.Use();
+
         glUniformMatrix4fv(glGetUniformLocation(shader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
         glUniformMatrix4fv(glGetUniformLocation(shader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
 
-        // Enviar variables de Iluminacion
-        glUniform3f(glGetUniformLocation(shader.Program, "lightPos"), lightPos.x, lightPos.y, lightPos.z);
-        glUniform3f(glGetUniformLocation(shader.Program, "lightColor"), lightColor.x, lightColor.y, lightColor.z);
+        // Enviar variables de Iluminacion (sol, ambiente, niebla y sombras)
+        AmbienteEnviar(shader);
+        SombrasEnviar(shader, lightSpace, amb.sombras);
         glUniform3f(glGetUniformLocation(shader.Program, "viewPos"), camPos.x, camPos.y, camPos.z);
 
         // ----- Focos de los postes (se mandan cada cuadro por la animacion) -----
@@ -355,7 +397,14 @@ int main()
         DibujarPista(shader);
 
         glUniform2f(glGetUniformLocation(shader.Program, "repetir"), 1.0f, 1.0f);
-        //DibujarGradas(shader);
+        DibujarGradasEstadio(shader);   // gradas con publico (Foro Sol y recta principal)
+        DibujarLineaMeta(shader);
+        DibujarPorticos(shader);        // porticos de cronometraje + semaforo
+        DibujarVallas(shader);          // vallas publicitarias
+        DibujarArbolesYCerros(shader);  // arboles y cerros al fondo
+        ComisarioDibujar(shader, currentFrame);   // comisario de meta (+ 2 de ambientacion)
+        BoxesDibujar(shader);                     // carril de boxes + mecanicos
+        PodioDibujar(shader, currentFrame);       // podio, trofeo y confeti (solo si esta activo)
 
         DibujarMarcador(shader, currentFrame);
 
@@ -457,12 +506,15 @@ int main()
         DibujarPapelPicado(projection, view, currentFrame);
         DibujarTiempoMarcador(projection * view);
         DibujarLetreroZona(projection * view);
-        DibujarHUDJuego(SCREEN_WIDTH, SCREEN_HEIGHT, modoCamara);
+        if (PodioActivo()) PodioHUD(SCREEN_WIDTH, SCREEN_HEIGHT);
+        else DibujarHUDJuego(SCREEN_WIDTH, SCREEN_HEIGHT, modoCamara);
 
         glfwSwapBuffers(window);
     }
 
     AudioCerrar();
+    SombrasLiberar();
+    AmbienteLiberar();
     LiberarModelos();
     glfwTerminate();
     return 0;
@@ -501,8 +553,17 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
     if (key == GLFW_KEY_L && action == GLFW_PRESS)
         verSpline = !verSpline;
 
-	// L: activar / desactivar luces de los postes
-    if (key == GLFW_KEY_F && action == GLFW_PRESS) { lucesActivas = true; tiempoLuces = 0.0f; }
+    // F: prender / apagar los reflectores de los postes
+    if (key == GLFW_KEY_F && action == GLFW_PRESS)
+        lucesActivas = !lucesActivas;
+
+    // N: cambiar de ambiente (dia -> atardecer -> noche). Los postes se prenden solos
+    // en atardecer y noche y se apagan de dia (despues se pueden cambiar con F).
+    if (key == GLFW_KEY_N && action == GLFW_PRESS)
+    {
+        AmbienteAlternar();
+        lucesActivas = (AmbienteModo() != AMB_DIA);
+    }
 
     // C: cambiar de camara (tercera persona -> onboard -> libre)
     if (key == GLFW_KEY_C && action == GLFW_PRESS)
@@ -512,9 +573,24 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
     if (key == GLFW_KEY_R && action == GLFW_PRESS)
         JuegoBotonDRS();
 
+    // B: pedir parada en boxes (entras en la siguiente pasada por la meta)
+    if (key == GLFW_KEY_B && action == GLFW_PRESS)
+        BoxesPedir();
+
+    // P: ver / cerrar el podio (tambien sale solo al terminar las vueltas)
+    if (key == GLFW_KEY_P && action == GLFW_PRESS)
+    {
+        if (PodioActivo()) PodioSalir(); else PodioActivar();
+    }
+
     // T: reiniciar la vuelta
     if (key == GLFW_KEY_T && action == GLFW_PRESS)
+    {
         JuegoReiniciar();
+        BoxesReiniciar();
+        PodioSalir();
+        podioMostrado = false;
+    }
 }
 
 void MouseCallback(GLFWwindow* window, double xPos, double yPos)

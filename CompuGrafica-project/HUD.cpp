@@ -169,7 +169,7 @@ void DibujarHUDJuego(int W, int H, int modoCamara)
     // ----- Cronometro (arriba a la izquierda) -----
     HUDRect(20, 20, 330, 150, FONDO);
     FranjaPapelPicado(20, 15, 330);
-    HUDTexto("VUELTA " + std::to_string(juego.vuelta), 35, 35, 21, GRIS);
+    HUDTexto("VUELTA " + std::to_string(glm::min(juego.vuelta, VUELTAS_CARRERA)) + "/" + std::to_string(VUELTAS_CARRERA), 35, 35, 21, GRIS);
     HUDTexto(FormatoTiempo(juego.tiempoVuelta), 35, 66, 42, BLANCO);
     HUDTexto("ULTIMA " + (juego.ultimaVuelta > 0 ? FormatoTiempo(juego.ultimaVuelta) : std::string("-:--.--")), 35, 122, 14, GRIS);
     HUDTexto("MEJOR  " + (juego.mejorVuelta > 0 ? FormatoTiempo(juego.mejorVuelta) : std::string("-:--.--")), 35, 145, 14, MORADO);
@@ -204,12 +204,12 @@ void DibujarHUDJuego(int W, int H, int modoCamara)
 
     // ----- Camara y controles (abajo a la izquierda) -----
     const char* nombres[3] = { "CAMARA LIBRE", "TERCERA PERSONA", "ONBOARD" };
-    HUDRect(20, H - 75.0f, 640, 55, FONDO);
+    HUDRect(20, H - 75.0f, 840, 55, FONDO);
     HUDTexto(std::string("C: ") + nombres[modoCamara], 35, H - 65.0f, 14, AMARILLO);
     if (modoCamara == 0)
         HUDTexto("WASD+MOUSE MOVER  SHIFT RAPIDO  C MANEJAR", 35, H - 42.0f, 11, GRIS);
     else
-        HUDTexto("W ACELERAR  S FRENAR  A/D LADO  R DRS  T REINICIAR", 35, H - 42.0f, 11, GRIS);
+        HUDTexto("W ACELERAR  S FRENAR  A/D LADO  R DRS  T REINICIAR  N AMBIENTE  F LUCES", 35, H - 42.0f, 11, GRIS);
 
     // ----- Mensaje al centro -----
     if (juego.tiempoMensaje > 0.0f && !juego.mensaje.empty())

@@ -253,6 +253,12 @@ void DibujarGradas(Shader& shader)
     gradasForo->Draw(shader);
 }
 
+void DibujarGradasEn(Shader& shader, const glm::mat4& model)
+{
+    glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+    gradasForo->Draw(shader);
+}
+
 void DibujarMarcador(Shader& shader, float tiempo)
 {
     glm::mat4 base = glm::mat4(1.0f);

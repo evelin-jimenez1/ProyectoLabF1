@@ -41,6 +41,12 @@
   <ItemGroup>
     <ClInclude Include="DiaDeMuertos.h" />
     <ClInclude Include="Audio.h" />
+    <ClInclude Include="Podio.h" />
+    <ClInclude Include="Boxes.h" />
+    <ClInclude Include="Comisario.h" />
+    <ClInclude Include="Estadio.h" />
+    <ClInclude Include="Sombras.h" />
+    <ClInclude Include="Ambiente.h" />
     <ClInclude Include="HUD.h" />
     <ClInclude Include="Juego.h" />
     <ClInclude Include="KeyFramesDRS.h" />
@@ -55,6 +61,12 @@
   <ItemGroup>
     <ClCompile Include="DiaDeMuertos.cpp" />
     <ClCompile Include="Audio.cpp" />
+    <ClCompile Include="Podio.cpp" />
+    <ClCompile Include="Boxes.cpp" />
+    <ClCompile Include="Comisario.cpp" />
+    <ClCompile Include="Estadio.cpp" />
+    <ClCompile Include="Sombras.cpp" />
+    <ClCompile Include="Ambiente.cpp" />
     <ClCompile Include="HUD.cpp" />
     <ClCompile Include="Juego.cpp" />
     <ClCompile Include="KeyFramesDRS.cpp" />

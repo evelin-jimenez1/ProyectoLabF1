@@ -12,6 +12,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 EstadoJuego juego;
+bool juegoEnPits = false;
 
 // ---------- Fisica arcade ----------
 const float VEL_MAX = 45.0f;            // ~160 km/h
@@ -282,23 +283,26 @@ void JuegoActualizar(float dt, const Controles& c)
 
     // ----- Lateral y colision con el muro -----
     float mover = 0.0f;
-    if (c.izquierda) mover -= 1.0f;
-    if (c.derecha)   mover += 1.0f;
-    float antes = j.lateral;
-    j.lateral = glm::clamp(j.lateral + mover * VEL_LATERAL * dt, -LATERAL_MAX, LATERAL_MAX);
-    bool tocaMuro = std::fabs(j.lateral) >= LATERAL_MAX && std::fabs(antes) < LATERAL_MAX;
-    if (tocaMuro && j.vel > 8.0f)
+    if (!juegoEnPits)    // en el carril de boxes el lateral lo maneja Boxes.cpp
     {
-        j.vel *= 0.65f;
-        juego.choquesMuro++;
-        Mensaje("CONTACTO CON EL MURO", 1.5f);
-        AudioReproducir(SONIDO_CHOQUE);
+        if (c.izquierda) mover -= 1.0f;
+        if (c.derecha)   mover += 1.0f;
+        float antes = j.lateral;
+        j.lateral = glm::clamp(j.lateral + mover * VEL_LATERAL * dt, -LATERAL_MAX, LATERAL_MAX);
+        bool tocaMuro = std::fabs(j.lateral) >= LATERAL_MAX && std::fabs(antes) < LATERAL_MAX;
+        if (tocaMuro && j.vel > 8.0f)
+        {
+            j.vel *= 0.65f;
+            juego.choquesMuro++;
+            Mensaje("CONTACTO CON EL MURO", 1.5f);
+            AudioReproducir(SONIDO_CHOQUE);
+        }
     }
 
     MoverCarro(j, dt, mover * -8.0f);   // al moverse a la derecha, las llantas giran a la derecha
 
     ActualizarRivales(dt);
-    ColisionesRivales();
+    if (!juegoEnPits) ColisionesRivales();
 
     // ----- Checkpoints y meta -----
     while (juego.sigCheckpoint <= NUM_CHECKPOINTS && j.dist >= distCheckpoint[juego.sigCheckpoint - 1])

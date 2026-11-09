@@ -15,6 +15,9 @@ void CargarModelos();
 void DibujarPasto(Shader& shader);
 void DibujarPista(Shader& shader);
 void DibujarGradas(Shader& shader);
+// Una grada (con su publico) colocada con la matriz 'model'. El origen del modulo
+// es el centro del frente; el frente mira hacia +Z y el publico sube hacia -Z.
+void DibujarGradasEn(Shader& shader, const glm::mat4& model);
 void DibujarMarcador(Shader& shader, float tiempo);
 void DibujarBandera(Shader shaderEstatico, Shader shaderViento);
 void DibujarFermin(Shader shader);

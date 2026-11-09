@@ -14,6 +14,7 @@
 #include "Shader.h"
 
 const int NUM_RIVALES = 3;
+const int VUELTAS_CARRERA = 3;        // al terminar estas vueltas aparece el podio
 const int NUM_CHECKPOINTS = 6;        // el ultimo es la meta
 
 // Estado de un monoplaza (sirve igual para el jugador y los rivales)
@@ -70,6 +71,10 @@ struct EstadoJuego
 };
 
 extern EstadoJuego juego;
+
+// true mientras el jugador va por el carril de boxes (ver Boxes.cpp):
+// ahi no hay choque con el muro ni con los rivales y el carro sale de la pista.
+extern bool juegoEnPits;
 
 void JuegoInicializar();                                // despues de SplineInicializar()
 void JuegoActualizar(float dt, const Controles& c);     // cada cuadro

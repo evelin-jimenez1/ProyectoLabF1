@@ -4,6 +4,7 @@ out vec4 color;
 in vec3 FragPos;
 in vec3 Normal;
 in vec2 TexCoords;
+in vec4 FragPosLightSpace;
 
 uniform sampler2D texture_diffuse1;
 uniform vec2 repetir; 
@@ -11,7 +12,16 @@ uniform vec2 repetir;
 // Variables de luz
 uniform vec3 lightPos;
 uniform vec3 viewPos;
-uniform vec3 lightColor;
+uniform vec3 lightColor;      // color e intensidad del sol (o de la luna)
+uniform vec3 ambientColor;    // luz ambiental (cambia con dia / atardecer / noche)
+
+// Sombras del sol (shadow mapping)
+uniform sampler2D shadowMap;
+uniform float sombrasActivas; // 0 = sin sombras (noche), 1 = con sombras
+
+// Niebla (da profundidad y esconde el borde del pasto)
+uniform vec3 fogColor;
+uniform float fogDensity;
 
 uniform float brilloPropio;   // 0 = usa la luz normal, 1 = se ve con su propio color
 
@@ -52,11 +62,29 @@ vec3 CalcularFoco(SpotLight f, vec3 norm, vec3 fragPos, vec3 viewDir)
     return (diff + 0.3 * spec) * f.color * f.intensidad * atenuacion * cono;
 }
 
+// Devuelve 1 si el punto recibe luz del sol y 0 si esta en sombra (PCF 3x3)
+float CalcularLuzSol(vec3 norm, vec3 lightDir)
+{
+    vec3 p = FragPosLightSpace.xyz / FragPosLightSpace.w;
+    p = p * 0.5 + 0.5;
+    if (p.z > 1.0 || p.x < 0.0 || p.x > 1.0 || p.y < 0.0 || p.y > 1.0) return 1.0;
+
+    float bias = max(0.0006 * (1.0 - dot(norm, lightDir)), 0.0002);
+    vec2 texel = 1.0 / vec2(textureSize(shadowMap, 0));
+    float luz = 0.0;
+    for (int x = -1; x <= 1; x++)
+        for (int y = -1; y <= 1; y++)
+        {
+            float prof = texture(shadowMap, p.xy + vec2(x, y) * texel).r;
+            luz += (p.z - bias > prof) ? 0.0 : 1.0;
+        }
+    return luz / 9.0;
+}
+
 void main()
 {
     // 1. Componente Ambiental (Luz base para que no haya oscuridad total)
-    float ambientStrength = 0.4f;
-    vec3 ambient = ambientStrength * lightColor;
+    vec3 ambient = ambientColor;
     
     // 2. Componente Difusa (Luz direccional directa)
     vec3 norm = normalize(Normal);
@@ -74,6 +102,7 @@ void main()
     // Multiplicador de coordenadas UV
     vec2 finalTexCoords = vec2(TexCoords.x * repetir.x, TexCoords.y * repetir.y);
     vec4 texColor = texture(texture_diffuse1, finalTexCoords);
+    if (texColor.a < 0.1) discard;   // PNG con transparencia (publico, rejas...)
     if (usarTinte > 0.5)
     {
         float brillo = dot(texColor.rgb, vec3(0.299, 0.587, 0.114));
@@ -85,8 +114,16 @@ void main()
     for (int i = 0; i < NUM_FOCOS; i++)
         luzFocos += CalcularFoco(focos[i], norm, FragPos, viewDir);
 
-    vec3 conLuz = (ambient + diffuse + specular + luzFocos) * texColor.rgb;
+    // El sol solo ilumina lo que no esta en sombra; el ambiente y los focos si
+    float luzSol = mix(1.0, CalcularLuzSol(norm, lightDir), sombrasActivas);
+    vec3 conLuz = (ambient + luzSol * (diffuse + specular) + luzFocos) * texColor.rgb;
     vec3 result = mix(conLuz, texColor.rgb, brilloPropio);
-    color = vec4(result, texColor.a);
+
+    // Niebla segun la distancia horizontal a la camara
+    float dist = length((viewPos - FragPos).xz);
+    float fog = 1.0 - exp(-pow(dist * fogDensity, 2.0));
+    result = mix(result, fogColor, clamp(fog, 0.0, 1.0));
+
+    color = vec4(result, 1.0);
     
 }
