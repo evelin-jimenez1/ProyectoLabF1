@@ -327,7 +327,7 @@ static const glm::vec3 coloresPapel[6] = {
 static void CrearPapelPicado()
 {
 	shaderPapel = new Shader("Shader/papel.vs", "Shader/papel.frag");
-	texPapel = CargarTextura("Models/papelPicado_mascara.png");   // blanco = papel, transparente = recorte
+	texPapel = CargarTextura("images/papelPicado_mascara.png");   // blanco = papel, transparente = recorte
 	texCable = CrearTexturaColor(0.1f, 0.1f, 0.1f);
 
 	// Rectangulo de 1 x 1 que cuelga hacia abajo desde su orilla de arriba (y = 0)

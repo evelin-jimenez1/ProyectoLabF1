@@ -97,7 +97,7 @@ void CargarModelos()
     modeloPoste = new Model((char*)"Models/Postes_Ilum.obj");
     modeloAltar = new Model((char*)"Models/Altar.obj");
     modeloPantalla = new Model((char*)"Models/Pantalla.obj");
-    texReversoPantalla = CargarTextura("Models/fibra.jpg");
+    texReversoPantalla = CargarTextura("images/fibra.jpg");
     manecillaHoras = new Model((char*)"Models/Manecilla_Horas.obj");
     manecillaMinutos = new Model((char*)"Models/Manecilla_Minutos.obj");
 

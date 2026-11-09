@@ -19,6 +19,9 @@ static GLuint texPatrocinio[NUM_PATROCINIOS];
 static GLuint texDamero = 0;          // linea de meta (8 x 2 cuadros)
 static GLuint texNegro, texGris, texBlanco, texLuzApagada, texLuzRoja;
 static GLuint texTronco, texCopa[2], texCerro[2];
+static GLuint texPiano = 0;                 // franjas rojas y blancas (images/piano.png)
+static GLuint vaoPianos = 0;
+static int numVerticesPianos = 0;
 
 // Arboles: posiciones (x, z, escala) calculadas una vez, lejos de la pista y de las zonas ocupadas
 struct Arbol { float x, z, escala; int tipo; };
@@ -48,6 +51,71 @@ GLuint CrearTexturaDamero(int columnas, int filas)
     return tex;
 }
 
+// ===================== PIANOS (CURBS) =====================
+// Franja roja y blanca pegada a cada orilla del asfalto, generada a lo largo de la spline:
+// una tira plana arriba y un borde que baja hasta el pasto por el lado de afuera.
+static const float PIANO_DENTRO = 4.0f;     // orilla del asfalto (ANCHO_PISTA / 2)
+static const float PIANO_FUERA = 4.55f;     // donde empiezan los petales de Dia de Muertos
+static const float PIANO_LARGO_TEXTURA = 3.0f;   // metros que cubre una repeticion de la textura
+
+static void Vert(std::vector<float>& v, glm::vec3 p, glm::vec3 n, float u, float t)
+{
+    v.insert(v.end(), { p.x, p.y, p.z, n.x, n.y, n.z, u, t });
+}
+
+static void CrearPianos()
+{
+    std::vector<float> v;
+    float L = SplineLongitud();
+    const float Y = ALTURA_PISTA + 0.015f;
+    for (int lado = -1; lado <= 1; lado += 2)
+        for (float s0 = 0.0f; s0 < L; s0 += 1.0f)
+        {
+            // el lado derecho se interrumpe donde va el carril de boxes
+            if (lado > 0 && s0 > 10.0f && s0 < 140.0f) continue;
+            float s1 = glm::min(s0 + 1.0f, L);
+            float t0 = s0 / PIANO_LARGO_TEXTURA, t1 = s1 / PIANO_LARGO_TEXTURA;
+            glm::vec3 a = SplinePuntoPista(s0, lado * PIANO_DENTRO), b = SplinePuntoPista(s0, lado * PIANO_FUERA);
+            glm::vec3 c = SplinePuntoPista(s1, lado * PIANO_FUERA), d = SplinePuntoPista(s1, lado * PIANO_DENTRO);
+            a.y = b.y = c.y = d.y = Y;
+            glm::vec3 arriba(0, 1, 0);
+            // tira de arriba (dos triangulos)
+            Vert(v, a, arriba, 0, t0); Vert(v, b, arriba, 1, t0); Vert(v, c, arriba, 1, t1);
+            Vert(v, a, arriba, 0, t0); Vert(v, c, arriba, 1, t1); Vert(v, d, arriba, 0, t1);
+            // borde de afuera: baja hasta el pasto
+            glm::vec3 n = glm::normalize(glm::vec3(lado * glm::normalize(SplineDerecha(s0)).x, 0.0f, lado * glm::normalize(SplineDerecha(s0)).z));
+            glm::vec3 b0(b.x, 0.0f, b.z), c0(c.x, 0.0f, c.z);
+            Vert(v, b, n, 0, t0); Vert(v, b0, n, 1, t0); Vert(v, c0, n, 1, t1);
+            Vert(v, b, n, 0, t0); Vert(v, c0, n, 1, t1); Vert(v, c, n, 0, t1);
+        }
+    numVerticesPianos = (int)(v.size() / 8);
+
+    GLuint vbo;
+    glGenVertexArrays(1, &vaoPianos);
+    glGenBuffers(1, &vbo);
+    glBindVertexArray(vaoPianos);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, v.size() * sizeof(float), v.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (GLvoid*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (GLvoid*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (GLvoid*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+    glBindVertexArray(0);
+}
+
+void DibujarPianos(Shader& shader)
+{
+    glUniform1f(glGetUniformLocation(shader.Program, "brilloPropio"), 0.0f);
+    UsarTextura(shader, texPiano, 1.0f, 1.0f);
+    glm::mat4 model(1.0f);
+    glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+    glBindVertexArray(vaoPianos);
+    glDrawArrays(GL_TRIANGLES, 0, numVerticesPianos);
+    glBindVertexArray(0);
+}
+
 void EstadioInicializar()
 {
     for (int i = 0; i < NUM_PATROCINIOS; i++)
@@ -61,6 +129,10 @@ void EstadioInicializar()
     texBlanco = CrearTexturaColor(0.95f, 0.95f, 0.95f);
     texLuzApagada = CrearTexturaColor(0.25f, 0.02f, 0.02f);
     texLuzRoja = CrearTexturaColor(1.0f, 0.08f, 0.05f);
+
+    // ---- Pianos (curbs) rojos y blancos a las orillas de la pista ----
+    texPiano = CargarTextura("images/piano.png");
+    CrearPianos();
 
     // ---- Arboles y cerros ----
     texTronco = CrearTexturaColor(0.30f, 0.20f, 0.12f);

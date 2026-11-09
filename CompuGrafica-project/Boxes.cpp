@@ -164,7 +164,7 @@ void BoxesInicializar()
     texPuerta[2] = CrearTexturaColor(1.00f, 0.55f, 0.05f);
     texPuerta[3] = CrearTexturaColor(0.10f, 0.60f, 0.30f);
     texOverol = CrearTexturaColor(0.88f, 0.12f, 0.12f);
-    texLlantaPit = CargarTextura("Models/llanta.png");
+    texLlantaPit = CargarTextura("images/llanta.png");
 }
 
 void BoxesPedir()

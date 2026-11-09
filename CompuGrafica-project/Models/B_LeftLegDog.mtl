@@ -10,5 +10,5 @@ newmtl Material__27
 	Kd 0.5880 0.5880 0.5880
 	Ks 0.0000 0.0000 0.0000
 	Ke 0.0000 0.0000 0.0000
-	map_Ka Texture_albedo.jpg
-	map_Kd Texture_albedo.jpg
+	map_Ka ../images/Texture_albedo.jpg
+	map_Kd ../images/Texture_albedo.jpg

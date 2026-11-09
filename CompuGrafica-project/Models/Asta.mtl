@@ -10,7 +10,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 2
-map_Kd plata.png
+map_Kd ../images/Plata.png
 
 
 newmtl Material.002
@@ -21,7 +21,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 2
-map_Kd mexicobandera.jpg
+map_Kd ../images/mexicobandera.jpg
 
 newmtl Material_Esfera
 Ns 490.000000
@@ -32,4 +32,4 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 3
-map_Kd dorado.png
+map_Kd ../images/Dorado.png

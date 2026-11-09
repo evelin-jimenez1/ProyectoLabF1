@@ -9,8 +9,8 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd TECPRO_Barriers_DM_Red.png
-map_Bump -bm 2.000000 TECPRO_Barriers_NM_2048p.png
+map_Kd ../images/TECPRO_Barriers_DM_Red.png
+map_Bump -bm 2.000000 ../images/TECPRO_Barriers_NM_2048p.png
 
 newmtl TECPRO_White
 Ns 43.660320
@@ -20,5 +20,5 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd TECPRO_Barriers_DM_White.png
+map_Kd ../images/TECPRO_Barriers_DM_White.png
 map_Bump -bm 2.000000 TECPRO_Barriers_NM_B.png

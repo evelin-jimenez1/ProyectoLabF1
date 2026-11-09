@@ -39,7 +39,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 3
-map_Kd marcadorF1.png
+map_Kd ../images/marcadorF1.png
 
 newmtl Material_Poste
 Ns 250.000000

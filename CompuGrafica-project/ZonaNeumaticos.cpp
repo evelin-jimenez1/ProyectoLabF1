@@ -34,7 +34,7 @@ void ZonaNeumaticosInicializar()
     origenZona = glm::translate(glm::mat4(1.0f), p);
     origenZona = glm::rotate(origenZona, glm::radians(SplineAnguloY(S_ZONA)), glm::vec3(0, 1, 0));
 
-    texLlanta = CargarTextura("Models/llanta.png");
+    texLlanta = CargarTextura("images/llanta.png");
     texPiso = CrearTexturaColor(0.55f, 0.55f, 0.53f);       // concreto
     texLinea = CrearTexturaColor(0.95f, 0.95f, 0.95f);
     texMantaRoja = CrearTexturaColor(0.80f, 0.10f, 0.10f);  // mantas termicas

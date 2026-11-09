@@ -9,7 +9,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 2
-map_Kd senna.png
+map_Kd ../images/senna.png
 
 newmtl Foto2
 Ns 250.000000
@@ -19,7 +19,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 2
-map_Kd hermanos-rodriguez.png
+map_Kd ../images/hermanos-rodriguez.png
 
 newmtl Mat_Altar
 Ns 250.000000
@@ -29,7 +29,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 2
-map_Kd PaletaColores.png
+map_Kd ../images/PaletaColores.png
 
 newmtl Material.001
 Ns 250.000000
@@ -40,7 +40,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 2
-map_Kd Papel.png
+map_Kd ../images/Papel.png
 
 newmtl Material.002
 Ns 250.000000
@@ -51,7 +51,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 2
-map_Kd Naranja_Cempa.png
+map_Kd ../images/Naranja_Cempa.png
 
 newmtl Papel1
 Ns 250.000000
@@ -62,4 +62,4 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 2
-map_Kd papelPicado1.png
+map_Kd ../images/papelPicado1.png

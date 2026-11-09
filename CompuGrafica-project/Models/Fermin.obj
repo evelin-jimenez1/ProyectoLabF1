@@ -1,6 +1,6 @@
 # Blender 5.1.2
 # www.blender.org
-mtllib Fermin_texturizado.mtl
+mtllib Fermin_Texturizado.mtl
 o Cube_001_color_scarf
 v -0.538451 7.244775 -0.100621
 v -0.538451 7.735965 0.161801

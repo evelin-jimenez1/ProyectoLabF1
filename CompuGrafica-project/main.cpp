@@ -399,6 +399,7 @@ int main()
         glUniform2f(glGetUniformLocation(shader.Program, "repetir"), 1.0f, 1.0f);
         DibujarGradasEstadio(shader);   // gradas con publico (Foro Sol y recta principal)
         DibujarLineaMeta(shader);
+        DibujarPianos(shader);          // pianos rojos y blancos en las orillas de la pista
         DibujarPorticos(shader);        // porticos de cronometraje + semaforo
         DibujarVallas(shader);          // vallas publicitarias
         DibujarArbolesYCerros(shader);  // arboles y cerros al fondo
