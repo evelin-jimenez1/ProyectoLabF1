@@ -128,64 +128,145 @@ void ComisarioActualizar(float dt)
 }
 
 // ============================ DIBUJO ============================
+// Paletas de las personas (los mismos colores que usan las personas de las gradas, "PC_..." en gradas.mtl)
+static GLuint texPielV[5], texPeloV[6], texPantalonV[4], texZapatoV[3];
+static GLuint texOjo, texBrillo, texBoca, texCachete;
+
+static GLuint Hex(unsigned int rgb)
+{
+    return CrearTexturaColor(((rgb >> 16) & 255) / 255.0f, ((rgb >> 8) & 255) / 255.0f, (rgb & 255) / 255.0f);
+}
+
 void ComisarioInicializar()
 {
-    texPiel = CrearTexturaColor(0.85f, 0.62f, 0.48f);
+    texPiel = Hex(0xe0a375);
     texChaleco = CrearTexturaColor(1.0f, 0.45f, 0.05f);     // chaleco naranja de comisario
-    texPantalon = CrearTexturaColor(0.10f, 0.11f, 0.18f);
+    texPantalon = Hex(0x19191e);
     texGorra = CrearTexturaColor(0.96f, 0.96f, 0.96f);
     texAsta = CrearTexturaColor(0.55f, 0.55f, 0.58f);
     texBanderaCuadros = CrearTexturaDamero(6, 4);
     texBanderaVerde = CrearTexturaColor(0.05f, 0.65f, 0.20f);
     texBanderaAmarilla = CrearTexturaColor(1.0f, 0.85f, 0.05f);
+
+    const unsigned int piel[5] = { 0xe0a375, 0x845638, 0xb77f54, 0xf9c199, 0xffd6b2 };
+    const unsigned int pelo[6] = { 0x110f0f, 0x382111, 0x6b3d19, 0x8c1e0f, 0xea7a1e, 0xf2cc66 };
+    const unsigned int pantalon[4] = { 0x997f60, 0x4c5972, 0x19191e, 0x263872 };
+    const unsigned int zapato[3] = { 0x191919, 0x724726, 0xf7f7f7 };
+    for (int i = 0; i < 5; i++) texPielV[i] = Hex(piel[i]);
+    for (int i = 0; i < 6; i++) texPeloV[i] = Hex(pelo[i]);
+    for (int i = 0; i < 4; i++) texPantalonV[i] = Hex(pantalon[i]);
+    for (int i = 0; i < 3; i++) texZapatoV[i] = Hex(zapato[i]);
+    texOjo = Hex(0x0a0707);
+    texBrillo = Hex(0xffffff);
+    texBoca = Hex(0x8c1419);
+    texCachete = Hex(0xff8c8c);
 }
 
 void DibujarPersona(Shader& shader, const glm::mat4& base, float brazo, float antebrazo,
-                    float bandera, GLuint texChaleco, GLuint texBandera, float brazoIzq, GLuint texGorraColor)
+                    float bandera, GLuint texChaleco, GLuint texBandera, float brazoIzq, GLuint texGorraColor,
+                    float adelante, float juntar, int variante, bool conGorra)
 {
     GLuint gorra = texGorraColor ? texGorraColor : texGorra;
+    int v = variante < 0 ? -variante : variante;
+    GLuint piel = texPielV[v % 5];                           // cada variante cambia piel, pelo, pantalon y zapatos
+    GLuint pelo = texPeloV[(v / 5 + v * 2) % 6];
+    GLuint pantalon = texPantalonV[(v * 3 + v / 7) % 4];
+    GLuint zapato = texZapatoV[(v * 7 + 1) % 3];
+    bool chongo = (v % 4) == 3;                              // pelo recogido
+    bool largo = (v % 3) == 0;                               // pelo largo hacia atras
     glm::mat4 m;
 
     // ---------- Torso (nodo padre de todo lo de arriba) ----------
     glm::mat4 torso = glm::translate(base, glm::vec3(0.0f, 1.25f, 0.0f));
     DibujarMalla(shader, mallaCubo, glm::scale(torso, glm::vec3(0.52f, 0.72f, 0.30f)), texChaleco);
 
-    // Piernas
+    // Piernas y zapatos
     for (int lado = -1; lado <= 1; lado += 2)
     {
-        m = glm::translate(base, glm::vec3(lado * 0.13f, 0.45f, 0.0f));
-        DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(0.20f, 0.90f, 0.22f)), texPantalon);
+        m = glm::translate(base, glm::vec3(lado * 0.13f, 0.495f, 0.0f));
+        DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(0.20f, 0.81f, 0.22f)), pantalon);
+        m = glm::translate(base, glm::vec3(lado * 0.13f, 0.045f, -0.05f));
+        DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(0.21f, 0.09f, 0.32f)), zapato);
     }
-    // Cabeza y gorra (hijas del torso). La gorra es blanca o del color indicado (pilotos del podio)
-    m = glm::translate(torso, glm::vec3(0.0f, 0.62f, 0.0f));
-    DibujarMalla(shader, mallaEsfera, glm::scale(m, glm::vec3(0.30f)), texPiel);
-    m = glm::translate(torso, glm::vec3(0.0f, 0.80f, 0.0f));
-    DibujarMalla(shader, mallaCilindro, glm::scale(m, glm::vec3(0.32f, 0.10f, 0.32f)), gorra);
-    m = glm::translate(torso, glm::vec3(0.0f, 0.78f, -0.20f));      // visera de la gorra
-    DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(0.26f, 0.03f, 0.18f)), gorra);
 
-    // Brazo izquierdo (hijo del torso): pegado al cuerpo o levantado (festejo)
+    // ---------- Cabeza (hija del torso): grande y redonda, con cara ----------
+    m = glm::translate(torso, glm::vec3(0.0f, 0.60f, 0.0f));
+    DibujarMalla(shader, mallaEsfera, glm::scale(m, glm::vec3(0.46f, 0.44f, 0.44f)), piel);
+    for (int lado = -1; lado <= 1; lado += 2)
+    {
+        // ojos con brillo
+        m = glm::translate(torso, glm::vec3(lado * 0.085f, 0.64f, -0.205f));
+        DibujarMalla(shader, mallaEsfera, glm::scale(m, glm::vec3(0.055f, 0.075f, 0.03f)), texOjo);
+        m = glm::translate(torso, glm::vec3(lado * 0.085f + 0.012f, 0.665f, -0.222f));
+        DibujarMalla(shader, mallaEsfera, glm::scale(m, glm::vec3(0.022f)), texBrillo);
+        // cachetes rosas
+        m = glm::translate(torso, glm::vec3(lado * 0.14f, 0.565f, -0.172f));
+        DibujarMalla(shader, mallaEsfera, glm::scale(m, glm::vec3(0.07f, 0.045f, 0.02f)), texCachete);
+    }
+    m = glm::translate(torso, glm::vec3(0.0f, 0.525f, -0.209f));                 // boca
+    DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(0.075f, 0.022f, 0.02f)), texBoca);
+
+    // Pelo y gorra
+    if (conGorra)
+    {
+        m = glm::translate(torso, glm::vec3(0.0f, 0.70f, 0.03f));                // gorra: casquete sobre la cabeza
+        DibujarMalla(shader, mallaEsfera, glm::scale(m, glm::vec3(0.49f, 0.42f, 0.48f)), gorra);
+        m = glm::translate(torso, glm::vec3(0.0f, 0.735f, -0.25f));              // visera
+        DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(0.30f, 0.03f, 0.20f)), gorra);
+        m = glm::translate(torso, glm::vec3(0.0f, 0.52f, 0.17f));                // pelo que sale por detras
+        DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(0.36f, 0.20f, 0.08f)), pelo);
+    }
+    else
+    {
+        m = glm::translate(torso, glm::vec3(0.0f, 0.68f, 0.05f));                // pelo: cubre arriba y atras
+        DibujarMalla(shader, mallaEsfera, glm::scale(m, glm::vec3(0.50f, 0.48f, 0.47f)), pelo);
+        if (largo)
+        {
+            m = glm::translate(torso, glm::vec3(0.0f, 0.46f, 0.15f));
+            DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(0.40f, 0.40f, 0.10f)), pelo);
+        }
+        if (chongo)
+        {
+            m = glm::translate(torso, glm::vec3(0.0f, 0.93f, 0.09f));
+            DibujarMalla(shader, mallaEsfera, glm::scale(m, glm::vec3(0.15f)), pelo);
+        }
+    }
+
+    // ---------- Brazo izquierdo (hijo del torso): manga, brazo, mano ----------
     glm::mat4 hombroIzq = glm::translate(torso, glm::vec3(-0.34f, 0.32f, 0.0f));
+    hombroIzq = glm::rotate(hombroIzq, glm::radians(-juntar), glm::vec3(0.0f, 1.0f, 0.0f));
+    hombroIzq = glm::rotate(hombroIzq, glm::radians(adelante), glm::vec3(1.0f, 0.0f, 0.0f));
     hombroIzq = glm::rotate(hombroIzq, glm::radians(-brazoIzq), glm::vec3(0.0f, 0.0f, 1.0f));
-    m = glm::translate(hombroIzq, glm::vec3(0.0f, -0.31f, 0.0f));
-    DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(0.14f, 0.62f, 0.14f)), texChaleco);
+    m = glm::translate(hombroIzq, glm::vec3(0.0f, -0.14f, 0.0f));
+    DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(0.16f, 0.28f, 0.16f)), texChaleco);
+    m = glm::translate(hombroIzq, glm::vec3(0.0f, -0.45f, 0.0f));
+    DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(0.12f, 0.34f, 0.12f)), piel);
+    m = glm::translate(hombroIzq, glm::vec3(0.0f, -0.65f, 0.0f));
+    DibujarMalla(shader, mallaEsfera, glm::scale(m, glm::vec3(0.16f)), piel);               // mano
 
     // ---------- Brazo derecho (hijo del torso): pivote en el hombro ----------
     glm::mat4 hombro = glm::translate(torso, glm::vec3(0.34f, 0.32f, 0.0f));
-    hombro = glm::rotate(hombro, glm::radians(brazo), glm::vec3(0.0f, 0.0f, 1.0f));
-    m = glm::translate(hombro, glm::vec3(0.0f, -0.25f, 0.0f));
-    DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(0.14f, 0.52f, 0.14f)), texChaleco);
+    hombro = glm::rotate(hombro, glm::radians(juntar), glm::vec3(0.0f, 1.0f, 0.0f));          // hacia el centro del cuerpo
+    hombro = glm::rotate(hombro, glm::radians(adelante), glm::vec3(1.0f, 0.0f, 0.0f));       // hacia adelante
+    hombro = glm::rotate(hombro, glm::radians(brazo), glm::vec3(0.0f, 0.0f, 1.0f));          // hacia el lado
+    m = glm::translate(hombro, glm::vec3(0.0f, -0.14f, 0.0f));
+    DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(0.16f, 0.28f, 0.16f)), texChaleco);   // manga
+    m = glm::translate(hombro, glm::vec3(0.0f, -0.38f, 0.0f));
+    DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(0.12f, 0.24f, 0.12f)), piel);
 
     // ---------- Antebrazo (hijo del brazo): pivote en el codo ----------
     glm::mat4 codo = glm::translate(hombro, glm::vec3(0.0f, -0.50f, 0.0f));
     codo = glm::rotate(codo, glm::radians(antebrazo), glm::vec3(0.0f, 0.0f, 1.0f));
     m = glm::translate(codo, glm::vec3(0.0f, -0.22f, 0.0f));
-    DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(0.12f, 0.46f, 0.12f)), texPiel);
+    DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(0.12f, 0.46f, 0.12f)), piel);
 
-    if (texBandera == 0) return;     // sin bandera (mecanicos, pilotos del podio)
-
-    // ---------- Asta (hija del antebrazo): se sostiene en la mano ----------
+    // ---------- Mano (hija del antebrazo) ----------
     glm::mat4 mano = glm::translate(codo, glm::vec3(0.0f, -0.44f, 0.0f));
+    DibujarMalla(shader, mallaEsfera, glm::scale(mano, glm::vec3(0.16f)), piel);
+
+    if (texBandera == 0) return;     // sin bandera (mecanicos, pilotos del podio, publico)
+
+    // ---------- Asta (hija de la mano): se sostiene con la mano ----------
     m = glm::translate(mano, glm::vec3(0.0f, -0.65f, 0.0f));
     DibujarMalla(shader, mallaCilindro, glm::scale(m, glm::vec3(0.05f, 1.9f, 0.05f)), texAsta);
 

@@ -22,9 +22,6 @@
 // Piloto del monoplaza (hijo del chasis)
 #include "Piloto.h"
 
-// Animacion de Fermin (hijo del escenario)
-#include "KeyFramesFermin.h"
-
 // ---------------- Modelos ----------------
 // Se guardan como punteros porque un Model solo se puede crear
 // despues de glewInit(); por eso se crean dentro de CargarModelos().
@@ -35,13 +32,7 @@ Model* modeloAsta = nullptr;
 Model* modeloTela = nullptr;
 Model* modeloTecpro_F1 = nullptr;
 Model* modeloBarreras = nullptr;
-//Model* modeloFermin = nullptr;
-Model* ferminCuerpo = nullptr;
-Model* ferminCabeza = nullptr;
-Model* ferminBrazoDer = nullptr;
-Model* ferminAntebrazoDer = nullptr;
-Model* ferminBrazoIzq = nullptr;
-Model* ferminAntebrazoIzq = nullptr;
+Model* modeloFermin = nullptr;
 Model* modeloPoste = nullptr;
 Model* modeloAltar = nullptr;
 Model* manecillaHoras = nullptr;
@@ -103,14 +94,7 @@ void CargarModelos()
     modeloTela = new Model((char*)"Models/Tela.obj");
     modeloTecpro_F1 = new Model((char*)"Models/Tecpro_F1.obj");
     modeloBarreras = new Model((char*)"Models/Barreras.obj");
-    //modeloFermin = new Model((char*)"Models/Fermin.obj");
-    ferminCabeza = new Model((char*)"Models/Fermin_Cabeza.obj");
-    ferminCuerpo = new Model((char*)"Models/Fermin_Cuerpo.obj");
-    ferminBrazoDer = new Model((char*)"Models/Fermin_BrazoDer.obj");
-    ferminAntebrazoDer = new Model((char*)"Models/Fermin_AntebrazoDer.obj");
-    ferminBrazoIzq = new Model((char*)"Models/Fermin_BrazoIzq.obj");
-    ferminAntebrazoIzq = new Model((char*)"Models/Fermin_AntebrazoIzq.obj");
-
+    modeloFermin = new Model((char*)"Models/Fermin.obj");
 
     // Mapas normal y especular del monoplaza (se cargan igual que las texturas de los modelos)
     texCarroNormal = TextureFromFile("carro_normal.png", "images");
@@ -317,48 +301,11 @@ void DibujarBandera(Shader shaderEstatico, Shader shaderViento) {
 
 }
 
-static const glm::vec3 HOMBRO_DER(-1.09f, 7.27f, -0.13f);
-static const glm::vec3 CODO_DER(-1.60f, 5.93f, -0.16f);
-static const glm::vec3 HOMBRO_IZQ(0.43f, 7.27f, -0.13f);
-static const glm::vec3 CODO_IZQ(0.93f, 5.93f, -0.16f);
-
-// Gira 'grados' alrededor de 'pivote' (igual que las manecillas del reloj)
-static glm::mat4 Articulacion(const glm::mat4& padre, glm::vec3 pivote, float grados, glm::vec3 eje)
-{
-    glm::mat4 m = glm::translate(padre, pivote);
-    m = glm::rotate(m, glm::radians(grados), eje);
-    return glm::translate(m, -pivote);
-}
-
-static void DibujarPieza(Shader& shader, Model* pieza, const glm::mat4& m)
-{
-    glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(m));
-    pieza->Draw(shader);
-}
-
 void DibujarFermin(Shader shader) {
-    const glm::vec3 EJE_Z(0.0f, 0.0f, 1.0f);
-
-    glm::mat4 base = glm::translate(glm::mat4(1.0f), glm::vec3(-200.0f, 0.0f, -135.0f));
-    base = glm::rotate(base, glm::radians(30.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    // Cuerpo (padre) - incluye la cabeza
-    DibujarPieza(shader, ferminCuerpo, base);
-
-	// Cabeza (hija del cuerpo)
-    glm::mat4 cabeza = Articulacion(base, glm::vec3(-0.36f, 7.5f, 0.1f), fCabeza, EJE_Z);
-    DibujarPieza(shader, ferminCabeza, cabeza);
-
-    // Brazo derecho (esta en X negativa: por eso el angulo va con signo -)
-    glm::mat4 brazoDer = Articulacion(base, HOMBRO_DER, -fBrazoDer, EJE_Z);
-    DibujarPieza(shader, ferminBrazoDer, brazoDer);
-    glm::mat4 anteDer = Articulacion(brazoDer, CODO_DER, -fAntebrazoDer, EJE_Z);  // hijo del brazo
-    DibujarPieza(shader, ferminAntebrazoDer, anteDer);
-
-    // Brazo izquierdo (X positiva: signo +)
-    glm::mat4 brazoIzq = Articulacion(base, HOMBRO_IZQ, fBrazoIzq, EJE_Z);
-    DibujarPieza(shader, ferminBrazoIzq, brazoIzq);
-    glm::mat4 anteIzq = Articulacion(brazoIzq, CODO_IZQ, fAntebrazoIzq, EJE_Z);
-    DibujarPieza(shader, ferminAntebrazoIzq, anteIzq);
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(120.0f, 0.0f, -70.0f));
+    glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+    modeloFermin->Draw(shader);
 }
 
 void DibujarBarreras(Shader shader, float x, float y, float z, float rotY) {

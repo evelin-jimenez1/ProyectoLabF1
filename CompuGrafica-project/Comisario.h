@@ -30,8 +30,12 @@ void ComisarioDibujar(Shader& shader, float tiempo);
 // el casco solo se usa en la carrera (ver Piloto.cpp).
 // texChaleco = textura de la camisa. texBandera = textura de la bandera (0 = sin asta ni bandera).
 // bandera = giro de la tela alrededor del asta.
+// adelante = los dos brazos hacia adelante (grados); juntar = los dos brazos hacia el centro del cuerpo
+// (para sostener algo con las dos manos). variante = cambia piel, pelo, pantalon y zapatos.
+// conGorra = false deja el pelo a la vista. Todas las personas tienen cara y manos.
 #include <glm/glm.hpp>
 #include <GL/glew.h>
 void DibujarPersona(Shader& shader, const glm::mat4& base, float brazo, float antebrazo,
                     float bandera, GLuint texChaleco, GLuint texBandera, float brazoIzq = 0.0f,
-                    GLuint texGorraColor = 0);
+                    GLuint texGorraColor = 0,
+                    float adelante = 0.0f, float juntar = 0.0f, int variante = 0, bool conGorra = true);

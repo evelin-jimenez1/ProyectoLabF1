@@ -96,25 +96,35 @@ void PodioDibujar(Shader& shader, float t)
         DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(3.05f, 0.06f, 3.05f)), texBlanco);
     }
 
-    // ---------- La copa: el 1o la levanta con las dos manos ----------
-    // k va de 0 (la copa esta frente al 1o) a 1 (la tiene arriba de la cabeza)
+    // ---------- La copa: el 1o la toma de la tarima y la levanta al frente con las dos manos ----------
+    // k va de 0 (la copa esta sobre la tarima, frente al 1o) a 1 (la sostiene con las dos manos)
     float tp = juego.tiempoJuego - t0;
     float k = glm::clamp((tp - 0.6f) / 1.6f, 0.0f, 1.0f);
     k = k * k * (3.0f - 2.0f * k);
+    const float ADELANTE = 140.0f, JUNTAR = 22.0f;       // postura final de los brazos (grados)
 
-    // ---------- Pilotos (festejan con los brazos arriba; el 1o levanta la copa) ----------
+    // Donde quedan las manos del 1o con esa postura (marco de la persona: x = lado, y = arriba, z = hacia adelante).
+    // Hombro (0.34, 1.57), brazo + antebrazo + mano = 0.98 m. Se usa para que la copa quede justo en sus manos.
+    float sa = std::sin(glm::radians(ADELANTE)), ca = std::cos(glm::radians(ADELANTE));
+    float sj = std::sin(glm::radians(JUNTAR)), cj = std::cos(glm::radians(JUNTAR));
+    float manoY = 1.57f - 0.98f * ca;                    // altura de las manos sobre la tarima
+    float manoZ = 0.98f * sa * cj;                       // cuanto salen hacia adelante
+
+    // ---------- Pilotos (festejan con los brazos arriba; el 1o sostiene la copa) ----------
     for (int i = 0; i < 1 + NUM_RIVALES; i++)
     {
         glm::mat4 p;
-        float brazo = 140.0f, brazoIzq = 140.0f;
+        float brazo = 140.0f, brazoIzq = 140.0f, adelante = 0.0f, juntar = 0.0f;
         if (i < 3)
         {
             p = glm::translate(base, glm::vec3(x[i], h[i] + 0.06f, 0.0f));
             brazo = 140.0f + 20.0f * std::sin(t * 6.0f + i);
             brazoIzq = 140.0f + 20.0f * std::sin(t * 6.0f + i + 2.0f);
-            if (i == 0)   // sube los brazos hasta la vertical para sostener la copa
+            if (i == 0)   // los brazos suben hacia adelante y se juntan para tomar la copa
             {
-                brazo = brazoIzq = 25.0f + 147.0f * k + 3.0f * k * std::sin(t * 6.0f);
+                brazo = brazoIzq = 0.0f;
+                adelante = 10.0f + (ADELANTE - 10.0f) * k;
+                juntar = JUNTAR * k;
             }
         }
         else   // el 4o lugar mira desde un lado
@@ -124,23 +134,27 @@ void PodioDibujar(Shader& shader, float t)
         }
         p = glm::rotate(p, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));   // mira hacia +Z (la camara)
         DibujarPersona(shader, p, brazo, 0.0f, 0.0f, texCamisa[orden[i].textura], 0, brazoIzq,
-                       texCamisa[orden[i].textura]);   // gorra del color de cada piloto
+                       texCamisa[orden[i].textura],           // gorra del color de cada piloto
+                       adelante, juntar, i * 3 + 2, true);
     }
 
-    // ---------- Trofeo: copa dorada que sube de la tarima a las manos del 1o ----------
+    // ---------- Trofeo: copa dorada que pasa de la tarima a las manos del 1o ----------
     {
-        float bob = 0.07f * k * std::sin(t * 6.0f);                          // se mueve al festejar
-        float bowlY = h[0] + 0.06f + 0.80f + 1.98f * k + bob;               // centro de la copa
-        float z = 1.0f * (1.0f - k);
-        glm::mat4 m = glm::translate(base, glm::vec3(0.0f, bowlY - 0.55f, z));            // base
+        // centro del pie de la copa: de la tarima (k = 0) a las manos (k = 1)
+        glm::vec3 P0(x[0], h[0] + 0.54f, 1.0f);
+        glm::vec3 P1(x[0], h[0] + 0.06f + manoY, manoZ);
+        glm::vec3 pie = glm::mix(P0, P1, k);
+        pie.y += 0.05f * k * std::sin(t * 6.0f);                                // se mueve al festejar
+
+        glm::mat4 m = glm::translate(base, pie + glm::vec3(0.0f, -0.23f, 0.0f));          // base
         DibujarMalla(shader, mallaCilindro, glm::scale(m, glm::vec3(0.34f, 0.08f, 0.34f)), texOro);
-        m = glm::translate(base, glm::vec3(0.0f, bowlY - 0.32f, z));                       // pie
+        m = glm::translate(base, pie);                                                    // pie (aqui lo agarran las manos)
         DibujarMalla(shader, mallaCilindro, glm::scale(m, glm::vec3(0.12f, 0.40f, 0.12f)), texOro);
-        m = glm::translate(base, glm::vec3(0.0f, bowlY, z));                               // copa
+        m = glm::translate(base, pie + glm::vec3(0.0f, 0.32f, 0.0f));                     // copa
         DibujarMalla(shader, mallaEsfera, glm::scale(m, glm::vec3(0.52f, 0.46f, 0.52f)), texOro);
         for (int lado = -1; lado <= 1; lado += 2)                                          // asas
         {
-            m = glm::translate(base, glm::vec3(lado * 0.30f, bowlY, z));
+            m = glm::translate(base, pie + glm::vec3(lado * 0.30f, 0.32f, 0.0f));
             DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(0.07f, 0.20f, 0.07f)), texOro);
         }
     }
@@ -159,7 +173,9 @@ void PodioDibujar(Shader& shader, float t)
                 q = glm::rotate(q, std::atan2(px, pz), glm::vec3(0.0f, 1.0f, 0.0f));         // mira hacia el podio
                 float b1 = 120.0f + 40.0f * std::sin(t * 6.0f + id);
                 float b2 = 120.0f + 40.0f * std::sin(t * 6.0f + id + 1.7f);
-                DibujarPersona(shader, q, b1, 0.0f, 0.0f, texConfeti[id % 6], 0, b2, texConfeti[(id + 2) % 6]);
+                bool conGorra = (id % 3) != 0;                                                // algunos con gorra, otros con el pelo al aire
+                DibujarPersona(shader, q, b1, 0.0f, 0.0f, texConfeti[id % 6], 0, b2, texConfeti[(id + 2) % 6],
+                               0.0f, 0.0f, id + 11, conGorra);
             }
 
     // ---------- Bandera de Mexico (con el escudo) detras del podio, entre dos astas ----------
