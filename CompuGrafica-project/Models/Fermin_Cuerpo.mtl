@@ -9,7 +9,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 1
-map_Kd C:/Users/jardo/OneDrive/Desktop/ProyectoF1CompuGraficaLab/CompuGrafica-project/images/Textura_06_Material_belt.png
+map_Kd ../images/Textura_06_Material_belt.png
 
 newmtl Material_boots
 Ns 0.999999
@@ -19,7 +19,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 1
-map_Kd C:/Users/jardo/OneDrive/Desktop/ProyectoF1CompuGraficaLab/CompuGrafica-project/images/Textura_03_Material_boots.png
+map_Kd ../images/Textura_03_Material_boots.png
 
 newmtl Material_fabric
 Ns 0.999999
@@ -29,7 +29,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 1
-map_Kd C:/Users/jardo/OneDrive/Desktop/ProyectoF1CompuGraficaLab/CompuGrafica-project/images/Textura_02_Material_fabric.png
+map_Kd ../Textura_02_Material_fabric.png
 
 newmtl Material_pants
 Ns 0.999999
@@ -39,7 +39,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 1
-map_Kd C:/Users/jardo/OneDrive/Desktop/ProyectoF1CompuGraficaLab/CompuGrafica-project/images/Textura_01_Material_pants.png
+map_Kd ../images/Textura_01_Material_pants.png
 
 newmtl Material_scarf
 Ns 0.999999
@@ -49,7 +49,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 1
-map_Kd C:/Users/jardo/OneDrive/Desktop/ProyectoF1CompuGraficaLab/CompuGrafica-project/images/Textura_08_Material_scarf.png
+map_Kd ../images/Textura_08_Material_scarf.png
 
 newmtl Material_torso
 Ns 0.999999
@@ -59,4 +59,4 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 1
-map_Kd C:/Users/jardo/OneDrive/Desktop/ProyectoF1CompuGraficaLab/CompuGrafica-project/images/Textura_07_Material_torso.png
+map_Kd ../images/Textura_07_Material_torso.png
