@@ -305,14 +305,20 @@ static GLuint texPapel;
 static GLuint VAOPapel = 0;
 static GLuint texCable;
 
-struct TiraPapel { float s; float alto; };   // metros sobre la spline y altura del cable
+// metros sobre la spline, altura del cable y hasta donde llega a la derecha (m del centro de la pista)
+// Las tiras de s = 60 y s = 110 pasan por el carril de boxes (de 5 a 10 m a la derecha, ver Boxes.cpp):
+// si el poste quedara en 7 m el carro lo atraviesa, asi que ahi el cable termina en 5.5 m: despues del
+// comisario de la bandera verde (4.75 m, ver Comisario.cpp) y antes del carro (que ocupa de 6.5 a 8.5 m).
+static const float DER_NORMAL = 7.0f;
+static const float DER_BOXES = 5.5f;
+struct TiraPapel { float s; float alto; float der; };
 static const TiraPapel tiras[] = {
-	{ 1270.0f, 7.0f }, { 1310.0f, 7.0f }, { 1350.0f, 7.0f }, { 1390.0f, 7.0f },   // recta principal
-	{ 20.0f, 7.0f }, { 60.0f, 7.0f }, { 110.0f, 7.0f }, { 160.0f, 7.0f },
-	{ 1040.0f, 6.0f }, { 1110.0f, 6.0f }, { 1180.0f, 6.0f },                    // Foro Sol
+	{ 1270.0f, 7.0f, DER_NORMAL }, { 1310.0f, 7.0f, DER_NORMAL }, { 1350.0f, 7.0f, DER_NORMAL }, { 1390.0f, 7.0f, DER_NORMAL },   // recta principal
+	{ 20.0f, 7.0f, DER_NORMAL }, { 60.0f, 7.0f, DER_BOXES }, { 110.0f, 7.0f, DER_BOXES }, { 160.0f, 7.0f, DER_NORMAL },
+	{ 1040.0f, 6.0f, DER_NORMAL }, { 1110.0f, 6.0f, DER_NORMAL }, { 1180.0f, 6.0f, DER_NORMAL },                    // Foro Sol
 };
 const int N_TIRAS = sizeof(tiras) / sizeof(tiras[0]);
-const float MEDIO_ANCHO_TIRA = 7.0f;     // el cable va de -7 a 7 m del centro de la pista
+const float MEDIO_ANCHO_TIRA = 7.0f;     // el cable empieza a -7 m del centro de la pista (el otro extremo es 'der')
 const float ANCHO_PAPEL = 0.75f, ALTO_PAPEL = 0.95f;
 
 // Colores del papel picado
@@ -359,7 +365,7 @@ static void CrearPapelPicado()
 // Punto del cable: va de un lado a otro de la pista y se cuelga un poco en medio
 static glm::vec3 PuntoCable(const TiraPapel& t, float u)   // u de 0 a 1
 {
-	float lateral = -MEDIO_ANCHO_TIRA + 2.0f * MEDIO_ANCHO_TIRA * u;
+	float lateral = -MEDIO_ANCHO_TIRA + (t.der + MEDIO_ANCHO_TIRA) * u;
 	glm::vec3 p = SplinePuntoPista(t.s, lateral);
 	float panza = 0.8f * (1.0f - (2.0f * u - 1.0f) * (2.0f * u - 1.0f));
 	p.y = t.alto - panza;
@@ -384,7 +390,7 @@ void DibujarPapelPicado(const glm::mat4& projection, const glm::mat4& view, floa
 	for (int t = 0; t < N_TIRAS; t++)
 	{
 		float rotY = SplineAnguloY(tiras[t].s);   // las banderitas ven hacia los carros
-		int n = (int)(2.0f * MEDIO_ANCHO_TIRA / ANCHO_PAPEL * 0.8f);
+		int n = (int)((tiras[t].der + MEDIO_ANCHO_TIRA) / ANCHO_PAPEL * 0.8f);
 		for (int i = 0; i < n; i++)
 		{
 			float u = (i + 0.5f) / n;

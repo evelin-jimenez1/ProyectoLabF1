@@ -163,8 +163,8 @@ void ComisarioInicializar()
 }
 
 void DibujarPersona(Shader& shader, const glm::mat4& base, float brazo, float antebrazo,
-                    float bandera, GLuint texChaleco, GLuint texBandera, float brazoIzq, GLuint texGorraColor,
-                    float adelante, float juntar, int variante, bool conGorra)
+    float bandera, GLuint texChaleco, GLuint texBandera, float brazoIzq, GLuint texGorraColor,
+    float adelante, float juntar, int variante, bool conGorra)
 {
     GLuint gorra = texGorraColor ? texGorraColor : texGorra;
     int v = variante < 0 ? -variante : variante;
@@ -294,10 +294,13 @@ void ComisarioDibujar(Shader& shader, float tiempo)
 
     // Comisario de meta: bandera a cuadros animada por keyframes
     DibujarPersona(shader, BaseComisario(0.0f, 6.5f),
-                   anguloBrazo, anguloAntebrazo, anguloBandera, texChaleco, texBanderaCuadros);
+        anguloBrazo, anguloAntebrazo, anguloBandera, texChaleco, texBanderaCuadros);
 
-    // Comisarios de ambientacion (bandera verde y amarilla), solo se balancean un poco
+    // Comisarios de ambientacion (bandera verde y amarilla), solo se balancean un poco.
+    // El de la bandera verde esta junto a boxes (s = 60) pero pegado a la pista: lateral 4.75 m
+    // (asfalto hasta 4.0, pianos hasta 4.55, carril de boxes desde 5.0). Antes estaba a 6.5 m,
+    // dentro del carril de boxes, y el carro lo atravesaba.
     float onda = 20.0f * std::sin(tiempo * 3.0f);
-    DibujarPersona(shader, BaseComisario(60.0f, 6.5f), 140.0f, onda, onda, texChaleco, texBanderaVerde);
+    DibujarPersona(shader, BaseComisario(60.0f, 4.75f), 140.0f, onda, onda, texChaleco, texBanderaVerde);
     DibujarPersona(shader, BaseComisario(120.0f, -6.5f), 140.0f, -onda, -onda, texChaleco, texBanderaAmarilla);
 }

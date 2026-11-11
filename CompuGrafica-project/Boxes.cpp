@@ -324,7 +324,7 @@ void BoxesDibujar(Shader& shader)
         glm::mat4 m = MatrizEnPista((S_RAMPA_FIN + S_SALE_INI) * 0.5f, LATERAL_PIT + lado * (ANCHO_CARRIL * 0.5f - 0.1f), 0.0f);
         m = glm::translate(m, glm::vec3(0.0f, ALTURA_PISTA + 0.02f, 0.0f));
         DibujarMalla(shader, mallaCubo, glm::scale(m, glm::vec3(0.14f, 0.02f, S_SALE_INI - S_RAMPA_FIN)),
-                     lado < 0 ? texLineaAmarilla : texLineaBlanca);
+            lado < 0 ? texLineaAmarilla : texLineaBlanca);
     }
     // Marca del box donde se detiene: rectangulo blanco
     {
@@ -366,10 +366,11 @@ void BoxesDibujar(Shader& shader)
         // Mecanico: afuera de la llanta, mirando al carro; se acerca con 'aprox'
         float dist = 1.45f + 3.2f * (1.0f - aprox);
         glm::mat4 base = glm::translate(carro, glm::vec3(lado * dist, 0.0f, z));
-        base = glm::rotate(base, glm::radians(-lado * 90.0f), glm::vec3(0.0f, 1.0f, 0.0f));   // mira hacia el carro
-        // Los de enfrente usan el brazo derecho; los de atras el izquierdo (para que apunten a la llanta)
-        if (i < 2) DibujarPersona(shader, base, brazo, 0.0f, 0.0f, texOverol, 0, 0.0f);
-        else       DibujarPersona(shader, base, 0.0f, 0.0f, 0.0f, texOverol, 0, brazo);
+        // La cara de DibujarPersona esta hacia -Z. El mecanico de la izquierda (lado = -1) debe mirar hacia +X
+        // y el de la derecha (lado = +1) hacia -X: giro = lado * 90 (con -lado * 90 quedaban de espaldas al carro).
+        base = glm::rotate(base, glm::radians(lado * 90.0f), glm::vec3(0.0f, 1.0f, 0.0f));   // mira hacia el carro
+        // Los dos brazos hacia adelante (hacia la llanta): 'brazo' va de 10 a 80 -> de 4.5 a 36 grados
+        DibujarPersona(shader, base, 0.0f, 0.0f, 0.0f, texOverol, 0, 0.0f, 0, brazo * 0.45f);
 
         // Llanta vieja: sale de la llanta y queda acostada en el piso
         if (viejo > 0.01f)

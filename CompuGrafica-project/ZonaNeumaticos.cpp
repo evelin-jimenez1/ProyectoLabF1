@@ -134,8 +134,11 @@ void DibujarZonaNeumaticos(Shader& sh)
     }
 
     // ----- Conos: fila junto a la pista y a la entrada de la zona -----
+    // La fila va en el borde exterior del carril de boxes (x = -0.4), pegada al muro de llantas.
+    // Antes estaba en x = -2.5, que es el centro del carril (LATERAL_PIT = 7.5 en Boxes.cpp) y el auto
+    // pasaba y se detenia encima de los conos. Se apoyan sobre la losa del carril (ALTURA_PISTA).
     for (float z = -18.0f; z <= 18.0f; z += 4.0f)
-        Cono(sh, glm::vec3(-2.5f, 0.0f, z));
+        Cono(sh, glm::vec3(-0.4f, ALTURA_PISTA + 0.005f, z));
     for (float x = 2.0f; x <= 10.0f; x += 2.0f)
         Cono(sh, glm::vec3(x, PISO, -LARGO_ZONA * 0.5f + 0.8f));
 
