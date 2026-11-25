@@ -63,6 +63,9 @@ static void interpolation()
     a.banderaInc = (b.bandera - a.bandera) / a.steps;
 }
 
+static bool metaPorHuesos = false;   // true = el comisario de meta se dibuja con el modelo de huesos
+static bool ondeoNuevo = false;      // se activa cada vez que empieza el ondeo
+
 void ComisarioOndear()
 {
     FrameIndex = 0;
@@ -81,6 +84,7 @@ void ComisarioOndear()
     resetElements();
     interpolation();
     play = true;
+    ondeoNuevo = true;
 }
 
 static void Animation(float dt)
@@ -288,13 +292,20 @@ static glm::mat4 BaseComisario(float s, float lateral)
     return glm::rotate(m, glm::radians(giro), glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
+// Para usar un modelo animado por huesos como comisario de meta (ver main.cpp)
+void ComisarioMetaPorHuesos(bool v) { metaPorHuesos = v; }
+bool ComisarioOndeoIniciado() { bool r = ondeoNuevo; ondeoNuevo = false; return r; }
+glm::mat4 ComisarioMetaBase() { return BaseComisario(0.0f, 6.5f); }
+
 void ComisarioDibujar(Shader& shader, float tiempo)
 {
     glUniform1f(glGetUniformLocation(shader.Program, "brilloPropio"), 0.0f);
 
     // Comisario de meta: bandera a cuadros animada por keyframes
-    DibujarPersona(shader, BaseComisario(0.0f, 6.5f),
-        anguloBrazo, anguloAntebrazo, anguloBandera, texChaleco, texBanderaCuadros);
+    // (si metaPorHuesos, lo dibuja main.cpp con el modelo Fermin_animado.fbx)
+    if (!metaPorHuesos)
+        DibujarPersona(shader, BaseComisario(0.0f, 6.5f),
+            anguloBrazo, anguloAntebrazo, anguloBandera, texChaleco, texBanderaCuadros);
 
     // Comisarios de ambientacion (bandera verde y amarilla), solo se balancean un poco.
     // El de la bandera verde esta junto a boxes (s = 60) pero pegado a la pista: lateral 4.75 m

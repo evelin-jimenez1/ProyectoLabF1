@@ -17,11 +17,15 @@
 //  amarilla (solo se mueven un poco, no tienen animacion por keyframes).
 // =============================================================
 #include "Shader.h"
+#include <glm/glm.hpp>
 
 void ComisarioInicializar();             // despues de SplineInicializar()
 void ComisarioActualizar(float dt);      // cada cuadro (avanza los keyframes y detecta la meta)
 void ComisarioOndear();                  // empieza la animacion de la bandera
 void ComisarioDibujar(Shader& shader, float tiempo);
+void ComisarioMetaPorHuesos(bool v);     // true = el comisario de meta lo dibuja main.cpp (modelo con huesos)
+bool ComisarioOndeoIniciado();           // true una vez cada vez que empieza el ondeo (para disparar la animacion)
+glm::mat4 ComisarioMetaBase();           // posicion y orientacion del comisario de meta
 
 // Persona articulada (la usan el comisario, los mecanicos de boxes y los pilotos del podio).
 // 'base' = en el piso, mirando hacia -Z. brazo / antebrazo = brazo derecho (grados);

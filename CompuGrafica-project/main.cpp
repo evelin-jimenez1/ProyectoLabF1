@@ -22,6 +22,8 @@
 //    R = abrir / cerrar DRS | T = reiniciar la vuelta
 //    F = encender / apagar postes | N = dia / atardecer / noche
 //    B = pedir boxes (pit stop) | P = podio | L = ver spline | ESC = salir
+//    K = el alebrije aletea / descansa (animacion de huesos)
+//    G = el publico de la grada nueva festeja / se detiene (huesos) | H = Fermin saluda (huesos)
 // =============================================================
 
 // Std. Includes
@@ -65,6 +67,7 @@
 #include "Boxes.h"
 #include "Podio.h"
 #include "Recap.h"
+#include "Esqueleto.h"   // animacion de huesos (alebrije)
 
 
 // Properties
@@ -93,6 +96,25 @@ bool firstMouse = true;
 // 0 = libre, 1 = tercera persona (detras del carro), 2 = onboard (cabina)
 int modoCamara = 1;
 
+
+// ---------- Alebrije (animacion de huesos, ver Esqueleto.h) ----------
+// Models/alebrije_anim.fbx trae un esqueleto de 10 huesos y dos animaciones: "Reposo" y "Aleteo".
+ModeloEsqueletico alebrije;
+bool alebrijeAletea = false;                              // K alterna entre Reposo y Aleteo
+const glm::vec3 ALEBRIJE_POS(-145.0f, 0.0f, -100.0f);     // al lado del altar (x, y, z)
+const float ALEBRIJE_ROT_Y = 180.0f;                      // grados: hacia donde mira
+const float ALEBRIJE_ESCALA = 0.7f;
+const float ALEBRIJE_BASE = 3.46f;                        // la base del modelo queda a -3.46 m del origen
+
+// Publico animado por huesos (grada nueva junto a las del Foro Sol) y Fermin animado por huesos
+ModeloEsqueletico publicoHuesos, ferminHuesos, comisarioHuesos;  // comisarioHuesos = comisario de meta (Fermin_animado.fbx)
+const float COMISARIO_ESCALA = 0.01f;      // misma escala que el Fermin de las gradas
+const float COMISARIO_ROT_Y = 180.0f;      // si sale volteado cambia a 0
+bool publicoFesteja = true;                               // G: festeja / se detiene
+bool ferminSaluda = true;                                 // H: saluda / se detiene
+const float PUBLICO_ESCALA = 0.004748f;                   // = 0.01 / 2.1061: deja la grada del FBX del mismo tamano que el modulo del juego (14.5 m)
+const glm::vec3 FERMIN_ANIM_POS(-192.0f, 0.0f, -140.0f);  // al lado del Fermin de keyframes
+const float FERMIN_ANIM_ROT_Y = 30.0f;
 
 // Video de la pantalla (animacion por cuadros)
 const int NUM_CUADROS = 50;
@@ -262,6 +284,18 @@ int main()
     EstadioInicializar();
     ComisarioInicializar();
     CargarKeyFramesFermin();
+    if (alebrije.Cargar("Models/alebrije_anim.fbx"))
+        alebrije.Reproducir("Reposo");
+    if (publicoHuesos.Cargar("Models/Publico_Animado_Huesos.fbx"))
+        publicoHuesos.Reproducir(0);          // el FBX trae 1 animacion ("Scene")
+    if (comisarioHuesos.Cargar("Models/Fermin_animado.fbx"))
+    {
+        comisarioHuesos.Reproducir(0, false);   // se reproduce una vez cuando el jugador llega a la meta
+        comisarioHuesos.Pausar(true);
+        ComisarioMetaPorHuesos(true);
+    }
+    if (ferminHuesos.Cargar("Models/Fermin_animado.fbx"))
+        ferminHuesos.Reproducir(0);           // 1 animacion ("Fermin_Rig_accion")
     BoxesInicializar();
     PodioInicializar();
     RecapInicializar();
@@ -304,6 +338,11 @@ int main()
         AmbienteActualizar(deltaTime);
         ComisarioActualizar(deltaTime);   // keyframes de la bandera a cuadros
 		AnimationFermin(deltaTime); // keyframes de Fermin
+        alebrije.Actualizar(deltaTime);   // huesos del alebrije (interpola los keyframes y mueve los vertices)
+        publicoHuesos.Actualizar(deltaTime);
+        ferminHuesos.Actualizar(deltaTime);
+        if (ComisarioOndeoIniciado()) { comisarioHuesos.Reproducir(0, false); comisarioHuesos.Pausar(false); }
+        comisarioHuesos.Actualizar(deltaTime);
 
         // Postes: al prenderlos se reinicia la animacion de parpadeo
         if (lucesActivas && !lucesPrevias) tiempoLuces = 0.0f;
@@ -530,6 +569,37 @@ int main()
         shader.Use(); // la bandera deja activo otro shader
         DibujarAltar(shader, -160.0f, 0.0f, -105.0f, -90.0f, 1.0f);
 
+        // ALEBRIJE (animacion de huesos): la base del modelo se apoya en el piso
+        {
+            glUniform2f(glGetUniformLocation(shader.Program, "repetir"), 1.0f, 1.0f);
+            glUniform1f(glGetUniformLocation(shader.Program, "usarTinte"), 0.0f);
+            glUniform1f(glGetUniformLocation(shader.Program, "brilloPropio"), 0.0f);
+            glm::mat4 modeloAlebrije = glm::translate(glm::mat4(1.0f), ALEBRIJE_POS + glm::vec3(0.0f, ALEBRIJE_BASE * ALEBRIJE_ESCALA, 0.0f));
+            modeloAlebrije = glm::rotate(modeloAlebrije, glm::radians(ALEBRIJE_ROT_Y), glm::vec3(0.0f, 1.0f, 0.0f));
+            modeloAlebrije = glm::scale(modeloAlebrije, glm::vec3(ALEBRIJE_ESCALA));
+            alebrije.Dibujar(shader, modeloAlebrije);
+
+            // Grada nueva con publico animado: 5.o modulo del Foro Sol (mismo lugar y giro que los otros 4).
+            // El FBX esta en cm: su frente queda en z = -2141 y su centro en x = +16.
+            glm::mat4 modeloGrada = glm::translate(glm::mat4(1.0f), glm::vec3(-203.0f, 0.0f, -105.0f + 4 * 14.5f));
+            modeloGrada = glm::rotate(modeloGrada, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+            modeloGrada = glm::scale(modeloGrada, glm::vec3(PUBLICO_ESCALA));
+            modeloGrada = glm::translate(modeloGrada, glm::vec3(-16.0f, 0.0f, 2141.0f));
+            publicoHuesos.Dibujar(shader, modeloGrada);
+
+            // Fermin animado por huesos (el FBX esta en cm: escala 0.01 lo deja del tamano del Fermin del juego)
+            glm::mat4 modeloFermin = glm::translate(glm::mat4(1.0f), FERMIN_ANIM_POS);
+            modeloFermin = glm::rotate(modeloFermin, glm::radians(FERMIN_ANIM_ROT_Y), glm::vec3(0.0f, 1.0f, 0.0f));
+            modeloFermin = glm::scale(modeloFermin, glm::vec3(0.01f));
+            ferminHuesos.Dibujar(shader, modeloFermin);
+        }
+        {   // comisario de meta con huesos
+            glm::mat4 mc = ComisarioMetaBase();
+            mc = glm::rotate(mc, glm::radians(COMISARIO_ROT_Y), glm::vec3(0.0f, 1.0f, 0.0f));
+            mc = glm::scale(mc, glm::vec3(COMISARIO_ESCALA));
+            comisarioHuesos.Dibujar(shader, mc);
+        }
+
         // ----- Spline (linea blanca por el centro de la pista) -----
         if (verSpline)
         {
@@ -557,6 +627,10 @@ int main()
     }
 
     AudioCerrar();
+    alebrije.Liberar();
+    publicoHuesos.Liberar();
+    ferminHuesos.Liberar();
+    comisarioHuesos.Liberar();
     SombrasLiberar();
     AmbienteLiberar();
     LiberarModelos();
@@ -612,6 +686,25 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
     // C: cambiar de camara (tercera persona -> onboard -> libre)
     if (key == GLFW_KEY_C && action == GLFW_PRESS)
         modoCamara = (modoCamara + 1) % 3;
+
+    // K: el alebrije cambia de animacion de huesos (Reposo <-> Aleteo)
+    if (key == GLFW_KEY_K && action == GLFW_PRESS)
+    {
+        alebrijeAletea = !alebrijeAletea;
+        alebrije.Reproducir(alebrijeAletea ? "Aleteo" : "Reposo");
+    }
+
+    // G: el publico de la grada nueva festeja / se detiene ; H: Fermin (huesos) saluda / se detiene
+    if (key == GLFW_KEY_G && action == GLFW_PRESS)
+    {
+        publicoFesteja = !publicoFesteja;
+        publicoHuesos.Pausar(!publicoFesteja);
+    }
+    if (key == GLFW_KEY_H && action == GLFW_PRESS)
+    {
+        ferminSaluda = !ferminSaluda;
+        ferminHuesos.Pausar(!ferminSaluda);
+    }
 
     // R: abrir / cerrar DRS (solo en las rectas)
     if (key == GLFW_KEY_R && action == GLFW_PRESS)

@@ -8,11 +8,14 @@
 #include "Comisario.h"
 #include "HUD.h"
 #include "Texturas.h"
+#include "CargaModelos.h"
+#include "Piloto.h"
 
 #include <algorithm>
 #include <cmath>
 #include <string>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/constants.hpp>
 
 // Centro del podio: terreno libre dentro del circuito
 static const glm::vec3 CENTRO(45.0f, 0.0f, -75.0f);
@@ -134,8 +137,8 @@ void PodioDibujar(Shader& shader, float t)
         }
         p = glm::rotate(p, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));   // mira hacia +Z (la camara)
         DibujarPersona(shader, p, brazo, 0.0f, 0.0f, texCamisa[orden[i].textura], 0, brazoIzq,
-                       texCamisa[orden[i].textura],           // gorra del color de cada piloto
-                       adelante, juntar, i * 3 + 2, true);
+            texCamisa[orden[i].textura],           // gorra del color de cada piloto
+            adelante, juntar, i * 3 + 2, true);
     }
 
     // ---------- Trofeo: copa dorada que pasa de la tarima a las manos del 1o ----------
@@ -175,8 +178,34 @@ void PodioDibujar(Shader& shader, float t)
                 float b2 = 120.0f + 40.0f * std::sin(t * 6.0f + id + 1.7f);
                 bool conGorra = (id % 3) != 0;                                                // algunos con gorra, otros con el pelo al aire
                 DibujarPersona(shader, q, b1, 0.0f, 0.0f, texConfeti[id % 6], 0, b2, texConfeti[(id + 2) % 6],
-                               0.0f, 0.0f, id + 11, conGorra);
+                    0.0f, 0.0f, id + 11, conGorra);
             }
+
+    // ---------- Carro derrapando en una tarima redonda (a la derecha del podio) ----------
+    // El carro da vueltas en circulo con la cola abierta: el cuerpo apunta hacia adentro del circulo (angulo de
+    // derrape), las llantas delanteras van en contravolante y el chasis se inclina hacia afuera.
+    {
+        const glm::vec3 P(9.5f, 0.0f, 4.0f);
+        const float RADIO_TARIMA = 3.5f, RADIO_GIRO = 0.9f;
+        const float DERRAPE = 40.0f;                                  // grados de cola abierta
+        glm::mat4 m = glm::translate(base, P + glm::vec3(0.0f, 0.07f, 0.0f));
+        DibujarMalla(shader, mallaCilindro, glm::scale(m, glm::vec3(2.0f * RADIO_TARIMA, 0.14f, 2.0f * RADIO_TARIMA)), texNegro);   // tarima
+        m = glm::translate(base, P + glm::vec3(0.0f, 0.15f, 0.0f));
+        DibujarMalla(shader, mallaCilindro, glm::scale(m, glm::vec3(2.0f * RADIO_TARIMA - 0.4f, 0.03f, 2.0f * RADIO_TARIMA - 0.4f)), texPlata);
+
+        float th = t * 1.1f;                                          // avance sobre el circulo
+        glm::vec3 pos(RADIO_GIRO * std::sin(th), 0.17f, RADIO_GIRO * std::cos(th));
+        float yaw = th - glm::half_pi<float>() + glm::radians(DERRAPE);
+        glm::mat4 carro = glm::translate(base, P + pos);
+        carro = glm::rotate(carro, yaw, glm::vec3(0.0f, 1.0f, 0.0f));
+        carro = glm::rotate(carro, glm::radians(-3.0f + 1.0f * std::sin(t * 7.0f)), glm::vec3(0.0f, 0.0f, 1.0f));   // se inclina y vibra
+        ReaccionPiloto derrape;
+        derrape.velocidad = 1.0f;                                     // vibracion de carro a toda velocidad
+        derrape.empuje = 0.3f;
+        derrape.tiempo = t;
+        DibujarCarro(shader, carro, t * 25.0f, -30.0f, 0.0f, glm::vec3(1.0f), true, derrape);   // contravolante, llantas girando rapido
+        glUniform1f(glGetUniformLocation(shader.Program, "usarTinte"), 0.0f);
+    }
 
     // ---------- Bandera de Mexico (con el escudo) detras del podio, entre dos astas ----------
     {
