@@ -291,6 +291,17 @@ static void DibujarCempasuchil(Shader& shader)
 			ArregloCempasuchil(shader, p, SplineAnguloY(s));
 		}
 	}
+
+	// Mas flores en el resto del circuito: un arreglo cada 24 m, alternando de lado
+	// (sin la zona de boxes ni el Foro Sol, que ya tienen su propia decoracion)
+	int k = 0;
+	for (float s = 205.0f; s < 1030.0f; s += 24.0f, k++)
+	{
+		int lado = (k % 2 == 0) ? 1 : -1;
+		glm::vec3 p = SplinePuntoPista(s, lado * LATERAL_FLORES);
+		p.y = 0.0f;
+		ArregloCempasuchil(shader, p, SplineAnguloY(s));
+	}
 }
 
 
@@ -316,6 +327,11 @@ static const TiraPapel tiras[] = {
 	{ 1270.0f, 7.0f, DER_NORMAL }, { 1310.0f, 7.0f, DER_NORMAL }, { 1350.0f, 7.0f, DER_NORMAL }, { 1390.0f, 7.0f, DER_NORMAL },   // recta principal
 	{ 20.0f, 7.0f, DER_NORMAL }, { 60.0f, 7.0f, DER_BOXES }, { 110.0f, 7.0f, DER_BOXES }, { 160.0f, 7.0f, DER_NORMAL },
 	{ 1040.0f, 6.0f, DER_NORMAL }, { 1110.0f, 6.0f, DER_NORMAL }, { 1180.0f, 6.0f, DER_NORMAL },                    // Foro Sol
+	// resto del circuito (una tira cada 60 m)
+	{ 230.0f, 7.0f, DER_NORMAL }, { 290.0f, 7.0f, DER_NORMAL }, { 350.0f, 7.0f, DER_NORMAL }, { 410.0f, 7.0f, DER_NORMAL },
+	{ 470.0f, 7.0f, DER_NORMAL }, { 530.0f, 7.0f, DER_NORMAL }, { 590.0f, 7.0f, DER_NORMAL }, { 650.0f, 7.0f, DER_NORMAL },
+	{ 710.0f, 7.0f, DER_NORMAL }, { 770.0f, 7.0f, DER_NORMAL }, { 830.0f, 7.0f, DER_NORMAL }, { 890.0f, 7.0f, DER_NORMAL },
+	{ 950.0f, 7.0f, DER_NORMAL }, { 1000.0f, 7.0f, DER_NORMAL },
 };
 const int N_TIRAS = sizeof(tiras) / sizeof(tiras[0]);
 const float MEDIO_ANCHO_TIRA = 7.0f;     // el cable empieza a -7 m del centro de la pista (el otro extremo es 'der')

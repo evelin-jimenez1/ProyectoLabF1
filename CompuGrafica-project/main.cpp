@@ -104,6 +104,19 @@ bool alebrijeAletea = false;                              // K alterna entre Rep
 const glm::vec3 ALEBRIJE_POS(-145.0f, 0.0f, -100.0f);     // al lado del altar (x, y, z)
 const float ALEBRIJE_ROT_Y = 180.0f;                      // grados: hacia donde mira
 const float ALEBRIJE_ESCALA = 0.7f;
+const float ALEBRIJE_GIRO_EXTRA = 180.0f;                 // el modelo mira hacia +Z: se gira 180 para que quede de frente a la pista
+// Alebrijes de decoracion junto a la pista: { metros recorridos s, lateral (m, + derecha / - izquierda), escala }
+// Todos miran hacia la pista (ver YawHaciaPista). Si alguno queda dentro de algo, cambia su s o su lateral.
+struct AlebrijeDeco { float s, lateral, escala; };
+const AlebrijeDeco ALEBRIJES_DECO[] = {
+    { 150.0f,  11.5f, 0.60f }, { 300.0f, -11.5f, 0.75f }, { 470.0f,  11.5f, 0.65f },
+    { 640.0f, -11.5f, 0.70f }, { 820.0f,  11.5f, 0.60f }, { 980.0f, -11.5f, 0.75f },
+    { 1150.0f, 11.5f, 0.65f }, { 1300.0f, -11.5f, 0.70f },
+};
+const int NUM_ALEBRIJES_DECO = (int)(sizeof(ALEBRIJES_DECO) / sizeof(ALEBRIJES_DECO[0]));
+std::vector<glm::vec3> posAlebrijesDeco;     // se calculan al iniciar (SplinePuntoPista)
+float yawAlebrijesDeco[16];
+float alebrijePrincipalYaw = 180.0f;         // el del altar: tambien mira a la pista
 const float ALEBRIJE_BASE = 3.46f;                        // la base del modelo queda a -3.46 m del origen
 
 // Publico animado por huesos (grada nueva junto a las del Foro Sol) y Fermin animado por huesos
@@ -222,6 +235,19 @@ void EnviarFoco(Shader& shader, int i, const Foco& f)
     glUniform1f(glGetUniformLocation(shader.Program, (n + "intensidad").c_str()), f.intensidad * 2.0f); // "5000 W"
 }
 
+// Giro en Y (grados) para que un modelo que mira hacia -Z quede de frente al punto mas cercano de la pista
+static float YawHaciaPista(const glm::vec3& p)
+{
+    float mejor = 1e30f, bx = 0.0f, bz = 0.0f;
+    for (float s = 0.0f; s < SplineLongitud(); s += 2.0f)
+    {
+        glm::vec3 q = SplinePosicion(s);
+        float d = (q.x - p.x) * (q.x - p.x) + (q.z - p.z) * (q.z - p.z);
+        if (d < mejor) { mejor = d; bx = q.x - p.x; bz = q.z - p.z; }
+    }
+    return glm::degrees(std::atan2(-bx, -bz));
+}
+
 int main()
 {
     // Init GLFW
@@ -266,6 +292,17 @@ int main()
 
     // ---------- Spline (Spline.cpp) ----------
     SplineInicializar();
+    for (int i = 0; i < NUM_ALEBRIJES_DECO && i < 16; i++)
+    {
+        glm::vec3 p = SplinePuntoPista(ALEBRIJES_DECO[i].s, ALEBRIJES_DECO[i].lateral);
+        p.y = 0.0f;
+        posAlebrijesDeco.push_back(p);
+        // mira al centro de la pista EN SU MISMO s (no al punto mas cercano: en las curvas y donde la pista pasa
+        // cerca de otro tramo, el mas cercano podia ser otra parte de la pista)
+        glm::vec3 c = SplinePosicion(ALEBRIJES_DECO[i].s);
+        yawAlebrijesDeco[i] = glm::degrees(std::atan2(-(c.x - p.x), -(c.z - p.z)));
+    }
+    alebrijePrincipalYaw = YawHaciaPista(ALEBRIJE_POS);
     std::cout << "Longitud de la pista: " << SplineLongitud() << " m" << std::endl;
     int numPuntosSpline;
     GLuint vaoSpline = CrearLineaSpline(numPuntosSpline);
@@ -305,7 +342,7 @@ int main()
     GLuint texPasto = CargarTextura("images/pasto.png");
 
     //  Cuadros del video de la pantalla 
-		// Carga las 50 imagenes (0001 a 0050) como texturas y los guard en arreglo
+        // Carga las 50 imagenes (0001 a 0050) como texturas y los guard en arreglo
     for (int i = 0; i < NUM_CUADROS; i++) {
         std::string num = std::to_string(i + 1);
         while (num.length() < 4) num = "0" + num;      // 1 - "0001"
@@ -318,7 +355,7 @@ int main()
 
     // La luz del sol (direccion, color, sombras) viene de Ambiente.cpp
 
-    
+
 
     // Game loop
     while (!glfwWindowShouldClose(window))
@@ -337,7 +374,7 @@ int main()
 
         AmbienteActualizar(deltaTime);
         ComisarioActualizar(deltaTime);   // keyframes de la bandera a cuadros
-		AnimationFermin(deltaTime); // keyframes de Fermin
+        AnimationFermin(deltaTime); // keyframes de Fermin
         alebrije.Actualizar(deltaTime);   // huesos del alebrije (interpola los keyframes y mueve los vertices)
         publicoHuesos.Actualizar(deltaTime);
         ferminHuesos.Actualizar(deltaTime);
@@ -487,7 +524,7 @@ int main()
 
 
         DibujarFermin(shader);
-       
+
         for (int i = 0; i < 11; i++)
             DibujarTecpro_F1(shader, tecproCurva1[i][0], 0.0f, tecproCurva1[i][1], tecproCurva1[i][2]);
         for (int i = 0; i < 14; i++)
@@ -496,7 +533,7 @@ int main()
             DibujarTecpro_F1(shader, tecproForoSol[i][0], 0.0f, tecproForoSol[i][1], tecproForoSol[i][2]);
         for (int i = 0; i < 10; i++)
             DibujarTecpro_F1(shader, tecproS[i][0], 0.0f, tecproS[i][1], tecproS[i][2]);
-        
+
         // BARRERAS DE CONCRETO 
         int numBarreras = 12; // 66.5 de largo / 6 por barrera = quedan pegadas
 
@@ -504,7 +541,7 @@ int main()
         float dx2 = 65.94f, dz2 = 10.38f;  // Fila derecha
         float rotacionIzquierda = glm::degrees(atan2(dx1, dz1));
         float rotacionDerecha = glm::degrees(atan2(dx2, dz2)) + 180.0f;
-		//Inicio recta principal 
+        //Inicio recta principal 
         DibujarFilaBarreras(shader, -175.65f, -163.64f, -109.80f, -153.97f, false);
         DibujarFilaBarreras(shader, -174.51f, -177.76f, -108.57f, -167.38f, true);
         // Final de la recta principal 
@@ -554,7 +591,7 @@ int main()
         DibujarPantalla(shader, texEnPantallas, 153.5f, 0.0f, 124.5f, -124.0f); // Antes de la horquilla
 
 
-		// Dibuja bandera animada
+        // Dibuja bandera animada
         shaderBandera.Use();
         // Enviar matrices de cámara al nuevo shader
         glUniformMatrix4fv(glGetUniformLocation(shaderBandera.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
@@ -575,9 +612,19 @@ int main()
             glUniform1f(glGetUniformLocation(shader.Program, "usarTinte"), 0.0f);
             glUniform1f(glGetUniformLocation(shader.Program, "brilloPropio"), 0.0f);
             glm::mat4 modeloAlebrije = glm::translate(glm::mat4(1.0f), ALEBRIJE_POS + glm::vec3(0.0f, ALEBRIJE_BASE * ALEBRIJE_ESCALA, 0.0f));
-            modeloAlebrije = glm::rotate(modeloAlebrije, glm::radians(ALEBRIJE_ROT_Y), glm::vec3(0.0f, 1.0f, 0.0f));
+            modeloAlebrije = glm::rotate(modeloAlebrije, glm::radians(alebrijePrincipalYaw + ALEBRIJE_GIRO_EXTRA), glm::vec3(0.0f, 1.0f, 0.0f));
             modeloAlebrije = glm::scale(modeloAlebrije, glm::vec3(ALEBRIJE_ESCALA));
             alebrije.Dibujar(shader, modeloAlebrije);
+
+            // Alebrijes de decoracion a lo largo de la pista (mismo modelo y misma animacion)
+            for (int i = 0; i < (int)posAlebrijesDeco.size(); i++)
+            {
+                float esc = ALEBRIJES_DECO[i].escala;
+                glm::mat4 md = glm::translate(glm::mat4(1.0f), posAlebrijesDeco[i] + glm::vec3(0.0f, ALEBRIJE_BASE * esc, 0.0f));
+                md = glm::rotate(md, glm::radians(yawAlebrijesDeco[i] + ALEBRIJE_GIRO_EXTRA), glm::vec3(0.0f, 1.0f, 0.0f));
+                md = glm::scale(md, glm::vec3(esc));
+                alebrije.Dibujar(shader, md);
+            }
 
             // Grada nueva con publico animado: 5.o modulo del Foro Sol (mismo lugar y giro que los otros 4).
             // El FBX esta en cm: su frente queda en z = -2141 y su centro en x = +16.
@@ -751,5 +798,3 @@ void MouseCallback(GLFWwindow* window, double xPos, double yPos)
     if (modoCamara == 0)   // el mouse solo mueve la camara libre
         camera.ProcessMouseMovement(xOffset, yOffset);
 }
-
-

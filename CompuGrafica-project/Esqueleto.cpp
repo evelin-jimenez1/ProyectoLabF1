@@ -242,7 +242,6 @@ GLuint ModeloEsqueletico::TexturaDelMaterial(const aiMaterial* mat)
 
         if (id)
         {
-            std::cout << "Esqueleto: textura cargada " << archivo << std::endl;
             texturasCreadas.push_back(id);
             cacheTex[archivo] = id;
             return id;
@@ -250,7 +249,6 @@ GLuint ModeloEsqueletico::TexturaDelMaterial(const aiMaterial* mat)
         std::cout << "Esqueleto: no se pudo cargar la textura " << archivo << std::endl;
     }
     // 2. Si no, se usa el color difuso (Kd) del material
-    std::cout << "Esqueleto: material SIN textura (" << directorio << "), se usa color liso" << std::endl;
     aiColor3D kd(0.8f, 0.8f, 0.8f);
     mat->Get(AI_MATKEY_COLOR_DIFFUSE, kd);
     GLuint color = TexturaColor(kd.r, kd.g, kd.b);
