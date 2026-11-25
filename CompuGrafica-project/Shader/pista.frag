@@ -28,6 +28,10 @@ uniform float usarMapas;
 uniform sampler2D normalMap;
 uniform sampler2D specMap;
 
+// Reflejo del ambiente (cubemap) con Fresnel de Schlick: se usa en la pintura del carro
+uniform samplerCube cuboAmbiente;
+uniform float usarReflejo;    // 0 = sin reflejo, 1 = reflejo completo
+
 uniform float brilloPropio;   // 0 = usa la luz normal, 1 = se ve con su propio color
 
 // Pintura de los autos rivales: 0 = textura normal, 1 = se pinta del color 'tinte'
@@ -137,6 +141,15 @@ void main()
     // El sol solo ilumina lo que no esta en sombra; el ambiente y los focos si
     float luzSol = mix(1.0, CalcularLuzSol(norm, lightDir), sombrasActivas);
     vec3 conLuz = (ambient + luzSol * (diffuse + specular) + luzFocos) * texColor.rgb;
+    // Fresnel (Schlick): F = F0 + (1 - F0) (1 - N.V)^5. A ras de la vista el carro refleja mas el cielo
+    if (usarReflejo > 0.0)
+    {
+        float cosT = max(dot(norm, viewDir), 0.0);
+        float F = 0.06 + 0.94 * pow(1.0 - cosT, 5.0);
+        vec3 R = reflect(-viewDir, norm);
+        vec3 entorno = texture(cuboAmbiente, R).rgb * (ambientColor * 2.2 + 0.1);   // el cielo cambia con dia / atardecer / noche
+        conLuz += usarReflejo * (0.10 + 0.9 * F) * entorno;
+    }
     vec3 result = mix(conLuz, texColor.rgb, brilloPropio);
 
     // Niebla segun la distancia horizontal a la camara

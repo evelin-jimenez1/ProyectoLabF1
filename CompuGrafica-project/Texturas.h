@@ -19,3 +19,7 @@ void UsarTextura(Shader& shader, GLuint textura, float repetirU, float repetirV)
 void UsarMapas(Shader& shader, GLuint normal, GLuint especular);
 // Regresa a la iluminacion normal (sin mapas)
 void QuitarMapas(Shader& shader);
+
+// Cubemap de 6 imagenes: carpeta/px.png nx.png py.png ny.png pz.png nz.png (derecha, izquierda, arriba, abajo, frente, atras).
+// Si falta alguna imagen se crea un cubemap negro de 1x1 (el shader siempre tiene una textura valida).
+GLuint CargarCubemap(const char* carpeta);

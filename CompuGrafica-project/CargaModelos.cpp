@@ -478,8 +478,10 @@ void DibujarCarro(Shader& shader, glm::mat4 base, float giroRuedas,
     modelCarro = glm::translate(base, -centro);
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelCarro));
     UsarMapas(shader, texCarroNormal, texCarroEsp);      // pintura: mapa normal + especular
+    glUniform1f(glGetUniformLocation(shader.Program, "usarReflejo"), 1.0f);   // pintura reflejante (cubemap + Fresnel)
     Chasis->Draw(shader);
     Aleron->Draw(shader);   // fijo: usa la misma matriz del chasis
+    glUniform1f(glGetUniformLocation(shader.Program, "usarReflejo"), 0.0f);
     QuitarMapas(shader);
     glUniform1f(glGetUniformLocation(shader.Program, "usarTinte"), 0.0f);   // lo demas no se pinta
 

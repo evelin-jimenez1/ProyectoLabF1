@@ -2,6 +2,7 @@
 //  Ambiente.cpp - dia / atardecer / noche
 // =============================================================
 #include "Ambiente.h"
+#include "Texturas.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
@@ -31,12 +32,14 @@ static ModoAmbiente modo = AMB_ATARDECER;      // arranca en atardecer
 static ParamsAmbiente actual = AMBIENTES[AMB_ATARDECER];
 
 static Shader* shaderCielo = nullptr;
+static GLuint texCubo = 0;        // cubemap del cielo (images/skybox), unidad 4
 static GLuint vaoVacio = 0;       // el cielo no usa vertices, pero core profile exige un VAO
 
 void AmbienteInicializar()
 {
     shaderCielo = new Shader("Shader/cielo.vs", "Shader/cielo.frag");
     glGenVertexArrays(1, &vaoVacio);
+    texCubo = CargarCubemap("images/skybox");
     actual = AMBIENTES[modo];
 }
 
@@ -77,6 +80,12 @@ void AmbienteDibujarCielo(const glm::mat4& proyeccion, const glm::mat4& vista)
     glUniform3fv(glGetUniformLocation(p, "solColor"), 1, glm::value_ptr(actual.solColor));
     glUniform1f(glGetUniformLocation(p, "estrellas"), actual.estrellas);
 
+    // Cubemap: da nubes y montanas al cielo (unidad 4)
+    glActiveTexture(GL_TEXTURE4);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, texCubo);
+    glUniform1i(glGetUniformLocation(p, "cubo"), 4);
+    glActiveTexture(GL_TEXTURE0);
+
     glDisable(GL_DEPTH_TEST);          // el cielo va al fondo de todo
     glBindVertexArray(vaoVacio);
     glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -94,11 +103,18 @@ void AmbienteEnviar(Shader& shader)
     glUniform3fv(glGetUniformLocation(p, "ambientColor"), 1, glm::value_ptr(actual.ambiente));
     glUniform3fv(glGetUniformLocation(p, "fogColor"), 1, glm::value_ptr(actual.horizonte));
     glUniform1f(glGetUniformLocation(p, "fogDensity"), actual.niebla);
+
+    // Cubemap para el reflejo del ambiente en la pintura del carro (unidad 4)
+    glActiveTexture(GL_TEXTURE4);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, texCubo);
+    glUniform1i(glGetUniformLocation(p, "cuboAmbiente"), 4);
+    glActiveTexture(GL_TEXTURE0);
 }
 
 void AmbienteLiberar()
 {
     glDeleteVertexArrays(1, &vaoVacio);
+    glDeleteTextures(1, &texCubo);
     delete shaderCielo;
     shaderCielo = nullptr;
 }
