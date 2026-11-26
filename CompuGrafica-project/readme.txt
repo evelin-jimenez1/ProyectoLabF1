@@ -3,7 +3,7 @@
  Computacion Grafica e Interaccion Humano-Computadora
  Facultad de Ingenieria, UNAM  -  Semestre 2027-1
  Tema: Mexico y su cultura
- Autores: Rodrigo Jardon Marin, Evelin Jimenez Olivo
+ Autores: Rodrigo Jardon Marin, Evelin Jimenez Olivo, Ximena Carolina Cruz Basilio, Hector Emilio Parra Fernandez
 ==========================================================
 
 REQUISITOS
