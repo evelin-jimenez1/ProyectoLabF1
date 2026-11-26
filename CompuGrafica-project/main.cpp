@@ -68,6 +68,7 @@
 #include "Podio.h"
 #include "Recap.h"
 #include "Esqueleto.h"   // animacion de huesos (alebrije)
+#include "Recorrido.h"
 
 
 // Properties
@@ -401,6 +402,8 @@ int main()
             controles.izquierda = keys[GLFW_KEY_A] || keys[GLFW_KEY_LEFT];
             controles.derecha = keys[GLFW_KEY_D] || keys[GLFW_KEY_RIGHT];
         }
+        if (RecorridoAcelerar()) controles.acelerar = true;
+
         if (PodioActivo()) controles = Controles();   // en el podio el carro no se maneja
         BoxesFiltrarControles(controles);       // en boxes el carro se maneja solo
         JuegoActualizar(deltaTime, controles);
@@ -437,7 +440,11 @@ int main()
         // ----- Camara segun el modo -----
         glm::mat4 view;
         glm::vec3 camPos;
-        if (PodioActivo())
+        if (RecorridoActivo())
+        {
+            view = RecorridoVista(deltaTime, camPos);   // recorrido automatico / camara de la grada
+        }
+        else if (PodioActivo())
         {
             view = PodioVista(currentFrame, camPos);   // camara orbital alrededor del podio
         }
@@ -669,7 +676,7 @@ int main()
         RecapGrabar(SCREEN_WIDTH, SCREEN_HEIGHT, deltaTime, !PodioActivo() && juego.estado == CORRIENDO);
 
         if (PodioActivo()) PodioHUD(SCREEN_WIDTH, SCREEN_HEIGHT);
-        else DibujarHUDJuego(SCREEN_WIDTH, SCREEN_HEIGHT, modoCamara);
+        else if (!RecorridoActivo()) DibujarHUDJuego(SCREEN_WIDTH, SCREEN_HEIGHT, modoCamara);
 
         glfwSwapBuffers(window);
     }
@@ -779,6 +786,14 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
         podioMostrado = false;
         tiempoFinCarrera = 0.0f;
     }
+
+    // V: recorrido automatico para grabar el video (otra vez V lo cancela)
+    if (key == GLFW_KEY_V && action == GLFW_PRESS)
+        RecorridoAlternar();
+
+    // J: camara que rodea a las 6 personas animadas de la grada nueva (otra vez J la quita)
+    if (key == GLFW_KEY_J && action == GLFW_PRESS)
+        RecorridoGradaAlternar();
 }
 
 void MouseCallback(GLFWwindow* window, double xPos, double yPos)
