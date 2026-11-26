@@ -14,6 +14,7 @@
 
 // IMPORTANTE: este es el UNICO .cpp que incluye Model.h
 // (Model.h tiene la funcion TextureFromFile escrita dentro del .h)
+#include <GLFW/glfw3.h>
 #include "Model.h"
 
 // Para dibujar la pantalla de video
@@ -29,6 +30,7 @@
 // Se guardan como punteros porque un Model solo se puede crear
 // despues de glewInit(); por eso se crean dentro de CargarModelos().
 static Model* gradasForo = nullptr;
+static Model* publicoCuadrado = nullptr;   // los munecos cuadrados de las gradas (animados en el vertex shader)
 static Model* marcadorForo = nullptr;
 Model* modeloBandera;
 Model* modeloAsta = nullptr;
@@ -96,7 +98,8 @@ static GLuint VAO, VBO, EBO;
 void CargarModelos()
 {
     // ----- Pista -----
-    gradasForo = new Model((char*)"Models/Gradas_Estadio_Texturizadas.obj");
+    gradasForo = new Model((char*)"Models/Gradas_Sin_Publico.obj");          // estructura, asientos y piso
+    publicoCuadrado = new Model((char*)"Models/Publico_Cuadrado.obj");     // solo los munecos
     marcadorForo = new Model((char*)"Models/Marcador_F1_animado.obj");
     modeloBandera = new Model((char*)"Models/Bandera_Mexico.obj");
     modeloAsta = new Model((char*)"Models/Asta.obj");
@@ -222,12 +225,14 @@ void LiberarModelos()
 {
     delete gradasForo;
     gradasForo = nullptr;
+    delete publicoCuadrado;
+    publicoCuadrado = nullptr;
 
-	delete marcadorForo;
-	marcadorForo = nullptr;
+    delete marcadorForo;
+    marcadorForo = nullptr;
 
     delete modeloPoste;
-	modeloPoste = nullptr;
+    modeloPoste = nullptr;
 
     delete modeloAltar;
     modeloAltar = nullptr;
@@ -255,6 +260,18 @@ void LiberarModelos()
     glDeleteBuffers(1, &EBO);
 }
 
+// Dibuja el publico cuadrado de una grada. El vertex shader (pista.vs) lo anima: cada muneco rebota y se balancea
+// con su propio ritmo; 'faseModulo' desfasa las gradas entre si.
+static void DibujarPublicoCuadrado(Shader& shader, const glm::mat4& model)
+{
+    float fase = model[3].x * 0.37f + model[3].z * 0.91f;
+    glUniform1i(glGetUniformLocation(shader.Program, "animarPublico"), 1);
+    glUniform1f(glGetUniformLocation(shader.Program, "tiempoPublico"), (float)glfwGetTime());
+    glUniform1f(glGetUniformLocation(shader.Program, "faseModulo"), fase);
+    publicoCuadrado->Draw(shader);
+    glUniform1i(glGetUniformLocation(shader.Program, "animarPublico"), 0);
+}
+
 void DibujarGradas(Shader& shader)
 {
     glm::mat4 model = glm::mat4(1.0f);
@@ -264,12 +281,14 @@ void DibujarGradas(Shader& shader)
 
     glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
     gradasForo->Draw(shader);
+    DibujarPublicoCuadrado(shader, model);
 }
 
 void DibujarGradasEn(Shader& shader, const glm::mat4& model)
 {
     glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
     gradasForo->Draw(shader);
+    DibujarPublicoCuadrado(shader, model);
 }
 
 void DibujarMarcador(Shader& shader, float tiempo)
@@ -286,7 +305,7 @@ void DibujarMarcador(Shader& shader, float tiempo)
     //  Manecillas del reloj (animacion) 
     glm::vec3 centroReloj(-3.52f, 10.198f, -1.428f);
     float anguloMin = tiempo * 72.0f;      // minutero: 2 vueltas en 10 seg
-    float anguloHora = anguloMin /36.0f;    // horario: 1 vuelta en 10 seg
+    float anguloHora = anguloMin / 36.0f;    // horario: 1 vuelta en 10 seg
 
     glm::mat4 m = glm::translate(base, centroReloj);
     m = glm::rotate(m, glm::radians(anguloMin), glm::vec3(0.0f, 0.0f, 1.0f));
@@ -310,7 +329,7 @@ void DibujarBandera(Shader shaderEstatico, Shader shaderViento) {
     shaderEstatico.Use();
     glUniformMatrix4fv(glGetUniformLocation(shaderEstatico.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
     modeloAsta->Draw(shaderEstatico);
-    
+
     shaderViento.Use();
     glUniformMatrix4fv(glGetUniformLocation(shaderViento.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
     modeloTela->Draw(shaderViento);
@@ -344,7 +363,7 @@ void DibujarFermin(Shader shader) {
     // Cuerpo (padre) - incluye la cabeza
     DibujarPieza(shader, ferminCuerpo, base);
 
-	// Cabeza (hija del cuerpo)
+    // Cabeza (hija del cuerpo)
     glm::mat4 cabeza = Articulacion(base, glm::vec3(-0.36f, 7.5f, 0.1f), fCabeza, EJE_Z);
     DibujarPieza(shader, ferminCabeza, cabeza);
 
@@ -395,7 +414,7 @@ void DibujarTecpro_F1(Shader shader, float x, float y, float z, float rotY) {
 void DibujarPoste(Shader shader, float x, float y, float z, float rotY) {
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, glm::vec3(x, y, z));
-    model = glm::rotate(model, glm::radians(rotY), glm::vec3(0.0f, 1.0f, 0.0f)); 
+    model = glm::rotate(model, glm::radians(rotY), glm::vec3(0.0f, 1.0f, 0.0f));
     model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
     glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
     modeloPoste->Draw(shader);
@@ -456,8 +475,8 @@ void DibujarPantalla(Shader& shader, GLuint textura, float x, float y, float z, 
 //           └─ piloto y volante        (ver Piloto.cpp)
 // =============================================================
 void DibujarCarro(Shader& shader, glm::mat4 base, float giroRuedas,
-                  float anguloDireccion, float aperturaDRS,
-                  glm::vec3 pintura, bool dibujarCabeza, const ReaccionPiloto& reaccion)
+    float anguloDireccion, float aperturaDRS,
+    glm::vec3 pintura, bool dibujarCabeza, const ReaccionPiloto& reaccion)
 {
     glm::mat4 model(1);
     glm::mat4 modelCarro(1);
