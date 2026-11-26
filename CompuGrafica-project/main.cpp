@@ -613,6 +613,8 @@ int main()
         // ZONA DEL ESTADIO (FORO SOL) - ALTAR DE MUERTOS
         shader.Use(); // la bandera deja activo otro shader
         DibujarAltar(shader, -160.0f, 0.0f, -105.0f, -90.0f, 1.0f);
+        glUniform2f(glGetUniformLocation(shader.Program, "repetir"), 1.0f, 1.0f);
+        DibujarArco(shader, -153.0f, 0.0f, -105.0f, 90.0f, 1.15f);   // arco de cempasuchil detras del altar
 
         // ALEBRIJE (animacion de huesos): la base del modelo se apoya en el piso
         {

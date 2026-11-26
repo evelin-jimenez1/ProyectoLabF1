@@ -25,6 +25,7 @@ void DibujarBarreras(Shader shader, float x, float y, float z, float rotY);
 void DibujarTecpro_F1(Shader shader, float x, float y, float z, float rotY);
 void DibujarPoste(Shader shader, float x, float y, float z, float rotY);
 void DibujarAltar(Shader shader, float x, float y, float z, float rotY, float escala);
+void DibujarArco(Shader shader, float x, float y, float z, float rotY, float escala);
 void DibujarFilaBarreras(Shader shader, float xIni, float zIni, float xFin, float zFin, bool voltear);
 void DibujarPantalla(Shader& shader, GLuint textura, float x, float y, float z, float rotY);
 

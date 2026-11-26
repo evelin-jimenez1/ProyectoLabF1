@@ -46,6 +46,7 @@ Model* ferminBrazoIzq = nullptr;
 Model* ferminAntebrazoIzq = nullptr;
 Model* modeloPoste = nullptr;
 Model* modeloAltar = nullptr;
+Model* modeloArco = nullptr;
 Model* manecillaHoras = nullptr;
 Model* manecillaMinutos = nullptr;
 
@@ -122,6 +123,7 @@ void CargarModelos()
     texCarbonoEsp = TextureFromFile("carbono_especular.png", "images");
     modeloPoste = new Model((char*)"Models/Postes_Ilum.obj");
     modeloAltar = new Model((char*)"Models/Altar.obj");
+    modeloArco = new Model((char*)"Models/Arco_Flores.obj");
     modeloPantalla = new Model((char*)"Models/Pantalla.obj");
     texReversoPantalla = CargarTextura("images/fibra.jpg");
     manecillaHoras = new Model((char*)"Models/Manecilla_Horas.obj");
@@ -236,6 +238,9 @@ void LiberarModelos()
 
     delete modeloAltar;
     modeloAltar = nullptr;
+
+    delete modeloArco;
+    modeloArco = nullptr;
 
     delete modeloPantalla;
     modeloPantalla = nullptr;
@@ -427,6 +432,15 @@ void DibujarAltar(Shader shader, float x, float y, float z, float rotY, float es
     model = glm::scale(model, glm::vec3(escala, escala, escala));
     glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
     modeloAltar->Draw(shader);
+}
+
+void DibujarArco(Shader shader, float x, float y, float z, float rotY, float escala) {
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(x, y, z));
+    model = glm::rotate(model, glm::radians(rotY), glm::vec3(0.0f, 1.0f, 0.0f));
+    model = glm::scale(model, glm::vec3(escala, escala, escala));
+    glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+    modeloArco->Draw(shader);
 }
 
 void DibujarPantalla(Shader& shader, GLuint textura, float x, float y, float z, float rotY)
