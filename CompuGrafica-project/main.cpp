@@ -104,6 +104,7 @@ bool alebrijeAletea = false;                              // K alterna entre Rep
 const glm::vec3 ALEBRIJE_POS(-145.0f, 0.0f, -100.0f);     // al lado del altar (x, y, z)
 const float ALEBRIJE_ROT_Y = 180.0f;                      // grados: hacia donde mira
 const float ALEBRIJE_ESCALA = 0.7f;
+const float ALEBRIJE_FACTOR = 1.0f;                       // las escalas de ALEBRIJES_DECO se usan tal cual
 const float ALEBRIJE_GIRO_EXTRA = 180.0f;                 // el modelo mira hacia +Z: se gira 180 para que quede de frente a la pista
 // Alebrijes de decoracion junto a la pista: { metros recorridos s, lateral (m, + derecha / - izquierda), escala }
 // Todos miran hacia la pista (ver YawHaciaPista). Si alguno queda dentro de algo, cambia su s o su lateral.
@@ -619,7 +620,7 @@ int main()
             // Alebrijes de decoracion a lo largo de la pista (mismo modelo y misma animacion)
             for (int i = 0; i < (int)posAlebrijesDeco.size(); i++)
             {
-                float esc = ALEBRIJES_DECO[i].escala;
+                float esc = ALEBRIJES_DECO[i].escala * ALEBRIJE_FACTOR;
                 glm::mat4 md = glm::translate(glm::mat4(1.0f), posAlebrijesDeco[i] + glm::vec3(0.0f, ALEBRIJE_BASE * esc, 0.0f));
                 md = glm::rotate(md, glm::radians(yawAlebrijesDeco[i] + ALEBRIJE_GIRO_EXTRA), glm::vec3(0.0f, 1.0f, 0.0f));
                 md = glm::scale(md, glm::vec3(esc));
@@ -632,7 +633,7 @@ int main()
             modeloGrada = glm::rotate(modeloGrada, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
             modeloGrada = glm::scale(modeloGrada, glm::vec3(PUBLICO_ESCALA));
             modeloGrada = glm::translate(modeloGrada, glm::vec3(-16.0f, 0.0f, 2141.0f));
-            publicoHuesos.Dibujar(shader, modeloGrada);
+            publicoHuesos.Dibujar(shader, modeloGrada);   // grada + las 6 personas, cada una con su propia animacion del FBX
 
             // Fermin animado por huesos (el FBX esta en cm: escala 0.01 lo deja del tamano del Fermin del juego)
             glm::mat4 modeloFermin = glm::translate(glm::mat4(1.0f), FERMIN_ANIM_POS);

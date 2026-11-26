@@ -63,6 +63,17 @@ public:
     // Dibuja con el shader de la pista (usa 'model', 'texture_diffuse1' y 'repetir')
     void Dibujar(Shader& shader, const glm::mat4& model);
 
+    // Dibujo por mallas (para repetir una misma malla animada en varios lugares, p. ej. el publico)
+    int  NumMallas() const;
+    bool MallaConHuesos(int i) const;                      // true si la malla se deforma con huesos (no es estructura fija)
+    void DibujarMalla(Shader& shader, const glm::mat4& model, int i);
+    // Para repetir una malla con distinta fase de animacion: PoseEn(t) -> PielMalla(i) -> DibujarMalla(...)
+    // Cambia la textura de una malla por un color liso (para mallas que el FBX trae en negro, sin textura de color)
+    void  ColorMalla(int i, float r, float g, float b);
+    void  PoseEn(float t);
+    void  PielMalla(int i);
+    float DuracionAnimacion() const;
+
 private:
     struct Nodo
     {
@@ -86,7 +97,7 @@ private:
     };
 
     Assimp::Importer importer;          // dueno de la escena: debe seguir vivo mientras se use
-    const aiScene*   escena = nullptr;
+    const aiScene* escena = nullptr;
 
     std::string        directorio;
     std::vector<Nodo>  nodos;           // orden "padre antes que hijo"
@@ -108,4 +119,5 @@ private:
     GLuint TexturaDelMaterial(const aiMaterial* mat);
     void CalcularPose();                // paso 1 y 2
     void AplicarPiel();                 // paso 3 y 4 + subir a la GPU
+    void AplicarMalla(Malla& m);       // piel de una sola malla
 };
