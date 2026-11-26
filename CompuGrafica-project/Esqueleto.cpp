@@ -3,6 +3,10 @@
 // =============================================================
 #include "Esqueleto.h"
 
+#ifndef ESQUELETO_VOLTEAR_V
+#define ESQUELETO_VOLTEAR_V 0
+#endif
+
 #include <cmath>
 #include <cstdio>
 #include <iostream>
@@ -107,8 +111,14 @@ bool ModeloEsqueletico::Cargar(const std::string& ruta)
 {
     Liberar();
     // LimitBoneWeights: maximo 4 huesos por vertice (lo que usa AplicarPiel)
-    escena = importer.ReadFile(ruta, aiProcess_Triangulate | aiProcess_FlipUVs |
-        aiProcess_GenSmoothNormals | aiProcess_LimitBoneWeights);
+    // ESQUELETO_VOLTEAR_V: 1 = aiProcess_FlipUVs (como en los OBJ del proyecto), 0 = no voltear.
+    // Para los FBX de Blender (alebrije, publico, Fermin) las texturas salian de cabeza con 1, asi que por defecto es 0.
+    // Si TODAS las texturas de estos modelos se ven al reves, cambia el valor.
+    unsigned int banderas = aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_LimitBoneWeights;
+#if ESQUELETO_VOLTEAR_V
+    banderas |= aiProcess_FlipUVs;
+#endif
+    escena = importer.ReadFile(ruta, banderas);
     if (!escena || (escena->mFlags & AI_SCENE_FLAGS_INCOMPLETE) || !escena->mRootNode)
     {
         std::cout << "ERROR::ASSIMP (Esqueleto):: " << importer.GetErrorString() << std::endl;
@@ -427,10 +437,14 @@ void ModeloEsqueletico::CalcularPose()
 // Pasos 3 y 4: matriz final de cada hueso y mover los vertices
 void ModeloEsqueletico::AplicarPiel()
 {
-    for (Malla& m : mallas)
+    for (Malla& m : mallas) AplicarMalla(m);
+}
+
+void ModeloEsqueletico::AplicarMalla(Malla& m)
+{
     {
         size_t nv = m.pos0.size();
-        if (nv == 0) continue;
+        if (nv == 0) return;
 
         std::vector<glm::mat4> finales(m.nodoDeHueso.size(), glm::mat4(1.0f));
         for (size_t b = 0; b < finales.size(); b++)
@@ -492,4 +506,67 @@ void ModeloEsqueletico::Dibujar(Shader& shader, const glm::mat4& model)
         glBindVertexArray(0);
     }
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+int ModeloEsqueletico::NumMallas() const { return (int)mallas.size(); }
+
+bool ModeloEsqueletico::MallaConHuesos(int i) const
+{
+    return i >= 0 && i < (int)mallas.size() && !mallas[i].nodoDeHueso.empty();
+}
+
+void ModeloEsqueletico::DibujarMalla(Shader& shader, const glm::mat4& model, int i)
+{
+    if (i < 0 || i >= (int)mallas.size()) return;
+    const Malla& m = mallas[i];
+    glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m.textura);
+    glUniform1i(glGetUniformLocation(shader.Program, "texture_diffuse1"), 0);
+    glBindVertexArray(m.vao);
+    glDrawElements(GL_TRIANGLES, m.numIndices, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+}
+
+
+// Pone el esqueleto en la pose del segundo 't' de la animacion (se repite en bucle) sin tocar el reloj propio
+void ModeloEsqueletico::PoseEn(float t)
+{
+    if (animActual < 0) return;
+    const aiAnimation* a = escena->mAnimations[animActual];
+    double tps = (a->mTicksPerSecond > 0.0) ? a->mTicksPerSecond : 25.0;
+    float dur = (float)(a->mDuration / tps);
+    float guardado = tiempo;
+    tiempo = (dur > 0.0f) ? fmodf(fmodf(t, dur) + dur, dur) : 0.0f;
+    CalcularPose();
+    tiempo = guardado;
+}
+
+// Deforma una sola malla con la pose calculada por PoseEn y sube sus vertices a la GPU
+void ModeloEsqueletico::PielMalla(int i)
+{
+    if (i >= 0 && i < (int)mallas.size()) AplicarMalla(mallas[i]);
+}
+
+float ModeloEsqueletico::DuracionAnimacion() const
+{
+    if (animActual < 0) return 0.0f;
+    const aiAnimation* a = escena->mAnimations[animActual];
+    double tps = (a->mTicksPerSecond > 0.0) ? a->mTicksPerSecond : 25.0;
+    return (float)(a->mDuration / tps);
+}
+
+void ModeloEsqueletico::ColorMalla(int i, float r, float g, float b)
+{
+    if (i < 0 || i >= (int)mallas.size()) return;
+    unsigned char px[4] = { (unsigned char)(r * 255.0f), (unsigned char)(g * 255.0f), (unsigned char)(b * 255.0f), 255 };
+    GLuint id = 0;
+    glGenTextures(1, &id);
+    glBindTexture(GL_TEXTURE_2D, id);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, px);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    texturasCreadas.push_back(id);
+    mallas[i].textura = id;
 }
